@@ -1,6 +1,6 @@
 #include <LiquidCrystal.h>
 
-const byte pinLedRouge=2, pinLedVerte=3, pinLedBleuMode1=4, pinLedVerteMode2=5, pinLedBlancheMode3=6;
+const byte pinLedRouge=2, pinLedVerte=3;
 const byte pinBuzzer=22;
 const byte pinBoutonPorte=12, pinBoutonMode=11, pinPhotoCell=0;
 
@@ -26,9 +26,6 @@ void setup() {
 
   pinMode(pinLedRouge,OUTPUT);
   pinMode(pinLedVerte,OUTPUT);
-  pinMode(pinLedBleuMode1,OUTPUT);
-  pinMode(pinLedVerteMode2,OUTPUT);
-  pinMode(pinLedBlancheMode3,OUTPUT);
 
   pinMode(pinBuzzer,OUTPUT);
   digitalWrite(pinBuzzer,HIGH);
@@ -59,27 +56,16 @@ void loop() {
   switch (mode)
   {
     case 1: // Mode 1 : Bouton
-      digitalWrite(pinLedBleuMode1,LOW);
-      digitalWrite(pinLedVerteMode2,HIGH);
-      digitalWrite(pinLedBlancheMode3,HIGH);
       modeBouton();
     break;
     case 2: // Mode 2 : Luminosite
-      digitalWrite(pinLedBleuMode1,HIGH);
-      digitalWrite(pinLedVerteMode2,LOW);
-      digitalWrite(pinLedBlancheMode3,HIGH);
       modeLuminosite();
     break;
     case 3: // Mode 3 : Horaire
-      digitalWrite(pinLedBleuMode1,HIGH);
-      digitalWrite(pinLedVerteMode2,HIGH);
-      digitalWrite(pinLedBlancheMode3,LOW);
       modeHorraire();
     break;
     default:
-      digitalWrite(pinLedBleuMode1,LOW);
-      digitalWrite(pinLedVerteMode2,LOW);
-      digitalWrite(pinLedBlancheMode3,LOW);
+
     break;
   }
 
@@ -93,7 +79,7 @@ void modeBouton() {
   etatBouton=digitalRead(pinBoutonPorte);
 
   lcd.setCursor(0, 1);
-  lcd.print("Mode BP : ");
+  lcd.print("Mode manu : ");
   lcd.print(etatBouton);
   lcd.print("      ");
 
@@ -111,7 +97,7 @@ void modeLuminosite() {
   etatPhotoCell=analogRead(pinPhotoCell);
 
   lcd.setCursor(0, 1);
-  lcd.print("Mode lum : ");
+  lcd.print("Mode auto : ");
   lcd.print(etatPhotoCell);
 
   if(etatPhotoCell>500)
@@ -127,7 +113,7 @@ void modeLuminosite() {
 void modeHorraire() {
 
   lcd.setCursor(0, 1);
-  lcd.print("Mode hor :         ");
+  lcd.print("Mode heur :         ");
 
 }
 
