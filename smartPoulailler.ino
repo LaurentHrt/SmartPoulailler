@@ -1,4 +1,6 @@
-const byte pinLedRouge=2, pinLedVerte=3, pinLedBleuMode1=4, pinLedVerteMode2=5, pinLedBlancheMode3=6;
+#include <LiquidCrystal.h>
+
+const byte pinLedRouge=2, pinLedVerte=3;
 const byte pinBuzzer=22;
 const byte pinBoutonPorte=12, pinBoutonMode=11, pinPhotoCell=0;
 
@@ -9,10 +11,10 @@ bool porteOuverte;
 
 int etatPhotoCell;
 
+// initialize the library with the numbers of the interface pins
+LiquidCrystal lcd(38, 39, 40, 41, 42, 43);
 
 void setup() {
-
-  Serial.begin(9600);
 
   mode=1;
 
@@ -24,15 +26,17 @@ void setup() {
 
   pinMode(pinLedRouge,OUTPUT);
   pinMode(pinLedVerte,OUTPUT);
-  pinMode(pinLedBleuMode1,OUTPUT);
-  pinMode(pinLedVerteMode2,OUTPUT);
-  pinMode(pinLedBlancheMode3,OUTPUT);
 
   pinMode(pinBuzzer,OUTPUT);
   digitalWrite(pinBuzzer,HIGH);
 
   pinMode(pinBoutonPorte,INPUT_PULLUP);
   pinMode(pinBoutonMode,INPUT_PULLUP);
+
+  // set up the LCD's number of columns and rows:
+  lcd.begin(16, 2);
+  // Print a message to the LCD.
+  lcd.print("Smart Poulailler");
 
 }
 
@@ -52,31 +56,20 @@ void loop() {
   switch (mode)
   {
     case 1: // Mode 1 : Bouton
-      digitalWrite(pinLedBleuMode1,LOW);
-      digitalWrite(pinLedVerteMode2,HIGH);
-      digitalWrite(pinLedBlancheMode3,HIGH);
       modeBouton();
     break;
     case 2: // Mode 2 : Luminosite
-      digitalWrite(pinLedBleuMode1,HIGH);
-      digitalWrite(pinLedVerteMode2,LOW);
-      digitalWrite(pinLedBlancheMode3,HIGH);
       modeLuminosite();
     break;
     case 3: // Mode 3 : Horaire
-      digitalWrite(pinLedBleuMode1,HIGH);
-      digitalWrite(pinLedVerteMode2,HIGH);
-      digitalWrite(pinLedBlancheMode3,LOW);
       modeHorraire();
     break;
     default:
-      digitalWrite(pinLedBleuMode1,LOW);
-      digitalWrite(pinLedVerteMode2,LOW);
-      digitalWrite(pinLedBlancheMode3,LOW);
+
     break;
   }
 
-  delay(200);
+  delay(100);
 
 }
 
@@ -84,7 +77,11 @@ void loop() {
 void modeBouton() {
 
   etatBouton=digitalRead(pinBoutonPorte);
-  Serial.println(etatBouton);
+
+  lcd.setCursor(0, 1);
+  lcd.print("Mode manu : ");
+  lcd.print(etatBouton);
+  lcd.print("      ");
 
   if(etatBouton!=dernierEtatBouton && etatBouton==LOW) {
     ouverturePorte(!porteOuverte);
@@ -98,17 +95,25 @@ void modeBouton() {
 void modeLuminosite() {
 
   etatPhotoCell=analogRead(pinPhotoCell);
-  Serial.println(etatPhotoCell);
+
+  lcd.setCursor(0, 1);
+  lcd.print("Mode auto : ");
+  lcd.print(etatPhotoCell);
 
   if(etatPhotoCell>500)
     ouverturePorte(true);
   else
     ouverturePorte(false);
 
+    delay(200);
+
 }
 
 // Fonction : Mode 3 : Horaire
 void modeHorraire() {
+
+  lcd.setCursor(0, 1);
+  lcd.print("Mode heur :         ");
 
 }
 
