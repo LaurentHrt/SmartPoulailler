@@ -1,7 +1,7 @@
-char pinLedRouge, pinLedVerte, pinLedBleuMode1, pinLedVerteMode2, pinLedBlancheMode3;
-char pinBouton, pinBoutonMode;
-char pinPhotoCell;
-char mode; //1: Mode bouton, 2: Mode Luminosité, 3: Mode horaire
+const byte pinLedRouge=2, pinLedVerte=3, pinLedBleuMode1=4, pinLedVerteMode2=5, pinLedBlancheMode3=6;
+const byte pinBoutonPorte=12, pinBoutonMode=11, pinPhotoCell=0;
+
+byte mode; //1: Mode bouton, 2: Mode Luminosité, 3: Mode horaire
 
 bool etatBouton, dernierEtatBouton, etatBoutonMode, dernierEtatBoutonMode;
 bool porteOuverte;
@@ -15,19 +15,9 @@ void setup() {
 
   mode=1;
 
-  pinLedRouge=2;
-  pinLedVerte=3;
-  pinLedBleuMode1=4;
-  pinLedVerteMode2=5;
-  pinLedBlancheMode3=6;
-
-  pinBouton=12;
-  pinBoutonMode=11;
-  pinPhotoCell=0;
-
   etatBouton=LOW;
-  etatBoutonMode=LOW;
   dernierEtatBouton=HIGH;
+  etatBoutonMode=HIGH;
   dernierEtatBoutonMode=HIGH;
   porteOuverte=LOW;
 
@@ -37,7 +27,7 @@ void setup() {
   pinMode(pinLedVerteMode2,OUTPUT);
   pinMode(pinLedBlancheMode3,OUTPUT);
 
-  pinMode(pinBouton,INPUT_PULLUP);
+  pinMode(pinBoutonPorte,INPUT_PULLUP);
   pinMode(pinBoutonMode,INPUT_PULLUP);
 
 }
@@ -51,35 +41,42 @@ void loop() {
     if (mode > 3)
       mode=1;
   }
-  // ************************************************
 
-  // ************* Mode 1 : Bouton ******************
-  if (mode==1)
-    modeBouton();
-  // ************************************************
-
-  // ************* Mode 1 : Luminosite **************
-  if (mode==2)
-    modeLuminosite();
-  // ************************************************
-
-  // ************* Mode 1 : Horaire ******************
-  if (mode==3)
-    modeHorraire();
-  // ************************************************
+  switch (mode)
+  {
+    case 1: // Mode 1 : Bouton
+      digitalWrite(pinLedBleuMode1,LOW);
+      digitalWrite(pinLedVerteMode2,HIGH);
+      digitalWrite(pinLedBlancheMode3,HIGH);
+      modeBouton();
+    break;
+    case 2: // Mode 2 : Luminosite
+      digitalWrite(pinLedBleuMode1,HIGH);
+      digitalWrite(pinLedVerteMode2,LOW);
+      digitalWrite(pinLedBlancheMode3,HIGH);
+      modeLuminosite();
+    break;
+    case 3: // Mode 3 : Horaire
+      digitalWrite(pinLedBleuMode1,HIGH);
+      digitalWrite(pinLedVerteMode2,HIGH);
+      digitalWrite(pinLedBlancheMode3,LOW);
+      modeHorraire();
+    break;
+    default:
+      digitalWrite(pinLedBleuMode1,LOW);
+      digitalWrite(pinLedVerteMode2,LOW);
+      digitalWrite(pinLedBlancheMode3,LOW);
+    break;
+  }
 
   delay(200);
 
 }
 
-// Fonction mode bouton
+// Fonction : Mode 1 : Bouton
 void modeBouton() {
 
-  digitalWrite(pinLedBleuMode1,LOW);
-  digitalWrite(pinLedVerteMode2,HIGH);
-  digitalWrite(pinLedBlancheMode3,HIGH);
-
-  etatBouton=digitalRead(pinBouton);
+  etatBouton=digitalRead(pinBoutonPorte);
   Serial.println(etatBouton);
 
   if(etatBouton!=dernierEtatBouton && etatBouton==LOW) {
@@ -90,12 +87,8 @@ void modeBouton() {
 
 }
 
-// Fonction mode luminosite
+// Fonction : Mode 2 : Luminosite
 void modeLuminosite() {
-
-  digitalWrite(pinLedBleuMode1,HIGH);
-  digitalWrite(pinLedVerteMode2,LOW);
-  digitalWrite(pinLedBlancheMode3,HIGH);
 
   etatPhotoCell=analogRead(pinPhotoCell);
   Serial.println(etatPhotoCell);
@@ -107,12 +100,8 @@ void modeLuminosite() {
 
 }
 
-// Fonction mode horaire
+// Fonction : Mode 3 : Horaire
 void modeHorraire() {
-
-  digitalWrite(pinLedBleuMode1,HIGH);
-  digitalWrite(pinLedVerteMode2,HIGH);
-  digitalWrite(pinLedBlancheMode3,LOW);
 
 }
 
