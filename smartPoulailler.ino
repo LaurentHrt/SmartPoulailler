@@ -1,3 +1,5 @@
+#include <LiquidCrystal.h>
+
 const byte pinLedRouge=2, pinLedVerte=3, pinLedBleuMode1=4, pinLedVerteMode2=5, pinLedBlancheMode3=6;
 const byte pinBuzzer=22;
 const byte pinBoutonPorte=12, pinBoutonMode=11, pinPhotoCell=0;
@@ -9,10 +11,10 @@ bool porteOuverte;
 
 int etatPhotoCell;
 
+// initialize the library with the numbers of the interface pins
+LiquidCrystal lcd(38, 39, 40, 41, 42, 43);
 
 void setup() {
-
-  Serial.begin(9600);
 
   mode=1;
 
@@ -33,6 +35,11 @@ void setup() {
 
   pinMode(pinBoutonPorte,INPUT_PULLUP);
   pinMode(pinBoutonMode,INPUT_PULLUP);
+
+  // set up the LCD's number of columns and rows:
+  lcd.begin(16, 2);
+  // Print a message to the LCD.
+  lcd.print("Smart Poulailler");
 
 }
 
@@ -76,7 +83,7 @@ void loop() {
     break;
   }
 
-  delay(200);
+  delay(100);
 
 }
 
@@ -84,7 +91,11 @@ void loop() {
 void modeBouton() {
 
   etatBouton=digitalRead(pinBoutonPorte);
-  Serial.println(etatBouton);
+
+  lcd.setCursor(0, 1);
+  lcd.print("Mode BP : ");
+  lcd.print(etatBouton);
+  lcd.print("      ");
 
   if(etatBouton!=dernierEtatBouton && etatBouton==LOW) {
     ouverturePorte(!porteOuverte);
@@ -98,17 +109,25 @@ void modeBouton() {
 void modeLuminosite() {
 
   etatPhotoCell=analogRead(pinPhotoCell);
-  Serial.println(etatPhotoCell);
+
+  lcd.setCursor(0, 1);
+  lcd.print("Mode lum : ");
+  lcd.print(etatPhotoCell);
 
   if(etatPhotoCell>500)
     ouverturePorte(true);
   else
     ouverturePorte(false);
 
+    delay(200);
+
 }
 
 // Fonction : Mode 3 : Horaire
 void modeHorraire() {
+
+  lcd.setCursor(0, 1);
+  lcd.print("Mode hor :         ");
 
 }
 
