@@ -42,9 +42,7 @@ void loop() {
   etatBoutonMode=digitalRead(pinBoutonMode);
   if(etatBoutonMode!=dernierEtatBoutonMode && etatBoutonMode==LOW) {
 
-    digitalWrite(pinBuzzer,LOW);
-    delay(100);
-    digitalWrite(pinBuzzer,HIGH);
+    buzz(100);
 
     mode++;
     if (mode > 3)
@@ -122,15 +120,25 @@ bool ouverturePorte(bool ouvrir) {
   if(!porteOuverte && ouvrir) {
     digitalWrite(pinLedRouge,HIGH);
     digitalWrite(pinLedVerte,LOW);
+    buzz(100);
     porteOuverte=true;
     return porteOuverte;
   }
   else if (porteOuverte && !ouvrir) {
     digitalWrite(pinLedRouge,LOW);
     digitalWrite(pinLedVerte,HIGH);
+    buzz(100);
     porteOuverte=false;
     return porteOuverte;
   }
   else
     return 0;
+}
+
+// Fonction faire un BIP sonore
+// Param : char duree du bip
+void buzz(char duree) {
+  digitalWrite(pinBuzzer,LOW);
+  delay(duree);
+  digitalWrite(pinBuzzer,HIGH);
 }
