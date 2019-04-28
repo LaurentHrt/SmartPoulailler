@@ -1,4 +1,5 @@
 const byte pinLedRouge=2, pinLedVerte=3, pinLedBleuMode1=4, pinLedVerteMode2=5, pinLedBlancheMode3=6;
+const byte pinBuzzer=22;
 const byte pinBoutonPorte=12, pinBoutonMode=11, pinPhotoCell=0;
 
 byte mode; //1: Mode bouton, 2: Mode Luminosité, 3: Mode horaire
@@ -27,6 +28,9 @@ void setup() {
   pinMode(pinLedVerteMode2,OUTPUT);
   pinMode(pinLedBlancheMode3,OUTPUT);
 
+  pinMode(pinBuzzer,OUTPUT);
+  digitalWrite(pinBuzzer,HIGH);
+
   pinMode(pinBoutonPorte,INPUT_PULLUP);
   pinMode(pinBoutonMode,INPUT_PULLUP);
 
@@ -37,6 +41,11 @@ void loop() {
   // ************* Gestion du mode *******************
   etatBoutonMode=digitalRead(pinBoutonMode);
   if(etatBoutonMode!=dernierEtatBoutonMode && etatBoutonMode==LOW) {
+
+    digitalWrite(pinBuzzer,LOW);
+    delay(100);
+    digitalWrite(pinBuzzer,HIGH);
+
     mode++;
     if (mode > 3)
       mode=1;
