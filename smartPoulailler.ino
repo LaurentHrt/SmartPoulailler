@@ -54,51 +54,65 @@ void loop() {
   // ************************************************
 
   // ************* Mode 1 : Bouton ******************
-  if (mode==1) {
-
-    digitalWrite(pinLedBleuMode1,LOW);
-    digitalWrite(pinLedVerteMode2,HIGH);
-    digitalWrite(pinLedBlancheMode3,HIGH);
-
-    etatBouton=digitalRead(pinBouton);
-    Serial.println(etatBouton);
-
-    if(etatBouton!=dernierEtatBouton && etatBouton==LOW) {
-      ouverturePorte(!porteOuverte);
-    }
-
-    dernierEtatBouton=etatBouton;
-  }
+  if (mode==1)
+    modeBouton();
   // ************************************************
 
   // ************* Mode 1 : Luminosite **************
-  if (mode==2) {
-
-    digitalWrite(pinLedBleuMode1,HIGH);
-    digitalWrite(pinLedVerteMode2,LOW);
-    digitalWrite(pinLedBlancheMode3,HIGH);
-
-    etatPhotoCell=analogRead(pinPhotoCell);
-    Serial.println(etatPhotoCell);
-
-    if(etatPhotoCell>500)
-      ouverturePorte(true);
-    else
-      ouverturePorte(false);
-  }
+  if (mode==2)
+    modeLuminosite();
   // ************************************************
 
   // ************* Mode 1 : Horaire ******************
-  if (mode==3) {
-
-    digitalWrite(pinLedBleuMode1,HIGH);
-    digitalWrite(pinLedVerteMode2,HIGH);
-    digitalWrite(pinLedBlancheMode3,LOW);
-
-  }
+  if (mode==3)
+    modeHorraire();
   // ************************************************
 
   delay(200);
+
+}
+
+// Fonction mode bouton
+void modeBouton() {
+
+  digitalWrite(pinLedBleuMode1,LOW);
+  digitalWrite(pinLedVerteMode2,HIGH);
+  digitalWrite(pinLedBlancheMode3,HIGH);
+
+  etatBouton=digitalRead(pinBouton);
+  Serial.println(etatBouton);
+
+  if(etatBouton!=dernierEtatBouton && etatBouton==LOW) {
+    ouverturePorte(!porteOuverte);
+  }
+
+  dernierEtatBouton=etatBouton;
+
+}
+
+// Fonction mode luminosite
+void modeLuminosite() {
+
+  digitalWrite(pinLedBleuMode1,HIGH);
+  digitalWrite(pinLedVerteMode2,LOW);
+  digitalWrite(pinLedBlancheMode3,HIGH);
+
+  etatPhotoCell=analogRead(pinPhotoCell);
+  Serial.println(etatPhotoCell);
+
+  if(etatPhotoCell>500)
+    ouverturePorte(true);
+  else
+    ouverturePorte(false);
+
+}
+
+// Fonction mode horaire
+void modeHorraire() {
+
+  digitalWrite(pinLedBleuMode1,HIGH);
+  digitalWrite(pinLedVerteMode2,HIGH);
+  digitalWrite(pinLedBlancheMode3,LOW);
 
 }
 
