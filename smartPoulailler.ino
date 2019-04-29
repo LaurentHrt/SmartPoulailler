@@ -1,5 +1,8 @@
 // Declaration des includes
-#include <LiquidCrystal.h>
+#include <LiquidCrystal.h>  // LCD
+#include <Wire.h>           // RTC
+#include <RTClib.h>         // RTC
+
 
 // Declaration des constantes
 const byte pinLedRouge=2, pinLedVerte=3;
@@ -15,7 +18,31 @@ int etatPhotoCell;
 // Declaration du LCD (numero de pin)
 LiquidCrystal lcd(38, 39, 40, 41, 42, 43);
 
+// Declaration de l'horloge
+RTC_DS3231 rtc;
+char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+
+
 void setup() {
+
+  Serial.begin(9600);
+
+  if (! rtc.begin()) {
+      Serial.println("Couldn't find RTC");
+    }
+
+  if (rtc.lostPower()) {
+    Serial.println("RTC lost power, lets set the time!");
+
+	// Comment out below lines once you set the date & time.
+    // Following line sets the RTC to the date & time this sketch was compiled
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+
+    // Following line sets the RTC with an explicit date & time
+    // for example to set January 27 2017 at 12:56 you would call:
+    // rtc.adjust(DateTime(2017, 1, 27, 12, 56, 0));
+  }
+
 
   // Initialisation des vaiables
   mode=1;
@@ -136,9 +163,24 @@ void modeLuminosite() {
 // Fonction : Mode 3 : Horaire
 void modeHorraire() {
 
+  // Aquisition de l'heure actuelle
+  DateTime now = rtc.now();
+
   // Mise a jour du LCD
   lcd.setCursor(0, 1);
-  lcd.print("Mode heur :         ");
+  lcd.print("Mode heur :  ");
+  lcd.setCursor(0, 0);
+  lcd.print(now.year(), DEC);
+  //lcd.print('/');
+  lcd.print(now.month(), DEC);
+  //lcd.print('/');
+  lcd.print(now.day(), DEC);
+  //lcd.print(" ");
+  lcd.print(now.hour(), DEC);
+  //lcd.print(':');
+  lcd.print(now.minute(), DEC);
+  //lcd.print(':');
+  lcd.print(now.second(), DEC);
 
 }
 
