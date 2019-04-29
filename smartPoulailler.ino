@@ -24,14 +24,14 @@ void setup() {
   etatBoutonMode=HIGH;
   dernierEtatBoutonMode=HIGH;
   etatPorte=LOW;
-  
+
   // Initialisation du mode des PIN
   pinMode(pinLedRouge,OUTPUT);
   pinMode(pinLedVerte,OUTPUT);
   pinMode(pinBuzzer,OUTPUT);
   pinMode(pinBoutonPorte,INPUT_PULLUP);
   pinMode(pinBoutonMode,INPUT_PULLUP);
-  
+
   // Initialisation de l'etat des PIN
   digitalWrite(pinBuzzer,HIGH);
 
@@ -46,7 +46,7 @@ void loop() {
 
   // Caclul du mode
   mode=calculMode();
- 
+
   // Selection du mode
   switch (mode)
   {
@@ -71,10 +71,10 @@ void loop() {
 // Fonction : Lecture du bouton mode
 // Return : mode
 byte calculMode() {
-  
+
   // Lecture du bouton
   etatBoutonMode=digitalRead(pinBoutonMode);
-  
+
   // Gestion du bouton
   if(etatBoutonMode!=dernierEtatBoutonMode && etatBoutonMode==LOW) {
     buzz(100);
@@ -82,12 +82,12 @@ byte calculMode() {
     if (mode > 3)
       mode=1;
   }
-  
+
   // Mise en memoire du dernier etat du bouton
-  dernierEtatBoutonMode=etatBoutonMode
-  
+  dernierEtatBoutonMode=etatBoutonMode;
+
   return mode;
-  
+
 }
 
 // Fonction : Mode 1 : Bouton
