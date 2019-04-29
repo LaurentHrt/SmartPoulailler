@@ -9,7 +9,7 @@ const byte pinBoutonPorte=12, pinBoutonMode=11, pinPhotoCell=0;
 // Declaration des variables globales
 byte mode; // 1: Mode bouton, 2: Mode Luminosité, 3: Mode horaire
 bool etatBouton, dernierEtatBouton, etatBoutonMode, dernierEtatBoutonMode;
-bool porteOuverte;
+bool etatPorte;
 int etatPhotoCell;
 
 // Declaration du LCD (numero de pin)
@@ -23,7 +23,7 @@ void setup() {
   dernierEtatBouton=HIGH;
   etatBoutonMode=HIGH;
   dernierEtatBoutonMode=HIGH;
-  porteOuverte=LOW;
+  etatPorte=LOW;
   
   // Initialisation du mode des PIN
   pinMode(pinLedRouge,OUTPUT);
@@ -104,7 +104,7 @@ void modeBouton() {
 
   // Gestion du bouton
   if(etatBouton!=dernierEtatBouton && etatBouton==LOW) {
-    ouverturePorte(!porteOuverte);
+    ouverturePorte(!etatPorte);
   }
 
   // Mise en memoire du dernier etat du bouton
@@ -147,19 +147,19 @@ void modeHorraire() {
 //              2: action de fermer la porte
 // Return : état de la porte
 bool ouverturePorte(bool ouvrir) {
-  if(!porteOuverte && ouvrir) {
+  if(!etatPorte && ouvrir) {
     digitalWrite(pinLedRouge,HIGH);
     digitalWrite(pinLedVerte,LOW);
     buzz(100);
-    porteOuverte=true;
-    return porteOuverte;
+    etatPorte=true;
+    return etatPorte;
   }
-  else if (porteOuverte && !ouvrir) {
+  else if (etatPorte && !ouvrir) {
     digitalWrite(pinLedRouge,LOW);
     digitalWrite(pinLedVerte,HIGH);
     buzz(100);
-    porteOuverte=false;
-    return porteOuverte;
+    etatPorte=false;
+    return etatPorte;
   }
   else
     return 0;
