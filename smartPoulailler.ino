@@ -3,7 +3,6 @@
 #include <Wire.h>           // RTC
 #include <RTClib.h>         // RTC
 
-
 // Declaration des constantes
 const byte pinLedRouge=2, pinLedVerte=3;
 const byte pinBuzzer=22;
@@ -14,6 +13,7 @@ byte mode; // 1: Mode bouton, 2: Mode Luminosité, 3: Mode horaire
 bool etatBouton, dernierEtatBouton, etatBoutonMode, dernierEtatBoutonMode;
 bool etatPorte;
 int etatPhotoCell;
+DateTime heureOuverture, heureFermeture;
 
 // Declaration du LCD (numero de pin)
 LiquidCrystal lcd(38, 39, 40, 41, 42, 43);
@@ -22,29 +22,21 @@ LiquidCrystal lcd(38, 39, 40, 41, 42, 43);
 RTC_DS3231 rtc;
 char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 
-
 void setup() {
 
+  // Demarrage du port serie
   Serial.begin(9600);
 
-  if (! rtc.begin()) {
-      Serial.println("Couldn't find RTC");
-    }
+  // Demarrage de l'horloge
+  rtc.begin();
+  // Decommenter la ligne suivante pour initialiser l'horloge a la date de la compilation
+  //rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
 
-  if (rtc.lostPower()) {
-    Serial.println("RTC lost power, lets set the time!");
+  // Initialisation des heures d'ouverture et de fermeture
+  heureOuverture = DateTime(2019, 04, 30, 7, 00, 00);
+  heureFermeture = DateTime(2019, 04, 30, 20, 00, 00);
 
-	// Comment out below lines once you set the date & time.
-    // Following line sets the RTC to the date & time this sketch was compiled
-    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-
-    // Following line sets the RTC with an explicit date & time
-    // for example to set January 27 2017 at 12:56 you would call:
-    // rtc.adjust(DateTime(2017, 1, 27, 12, 56, 0));
-  }
-
-
-  // Initialisation des vaiables
+  // Initialisation des variables
   mode=1;
   etatBouton=LOW;
   dernierEtatBouton=HIGH;
@@ -64,10 +56,8 @@ void setup() {
 
   // Initialisation du LCD
   lcd.begin(16, 2);
-  lcd.print("Smart Poulailler");
 
 }
-
 
 void loop() {
 
@@ -124,12 +114,13 @@ void modeBouton() {
   etatBouton=digitalRead(pinBoutonPorte);
 
   // Mise a jour du LCD
+  lcd.setCursor(0, 0);
+  lcd.print("Mode manu              ");
   lcd.setCursor(0, 1);
-  lcd.print("Mode manu : ");
   lcd.print(etatBouton);
-  lcd.print("      ");
+  lcd.print("                   ");
 
-  // Gestion du bouton
+  // Action sur la porte
   if(etatBouton!=dernierEtatBouton && etatBouton==LOW) {
     ouverturePorte(!etatPorte);
   }
@@ -146,11 +137,13 @@ void modeLuminosite() {
   etatPhotoCell=analogRead(pinPhotoCell);
 
   // Mise a jour du LCD
+  lcd.setCursor(0, 0);
+  lcd.print("Mode auto :           ");
   lcd.setCursor(0, 1);
-  lcd.print("Mode auto : ");
   lcd.print(etatPhotoCell);
+  lcd.print("                  ");
 
-  // Gestion de la photocell
+  // Action sur la porte
   if(etatPhotoCell>500)
     ouverturePorte(true);
   else
@@ -167,20 +160,28 @@ void modeHorraire() {
   DateTime now = rtc.now();
 
   // Mise a jour du LCD
-  lcd.setCursor(0, 1);
-  lcd.print("Mode heur :  ");
   lcd.setCursor(0, 0);
-  lcd.print(now.year(), DEC);
-  //lcd.print('/');
-  lcd.print(now.month(), DEC);
-  //lcd.print('/');
-  lcd.print(now.day(), DEC);
-  //lcd.print(" ");
+  lcd.print("Mode horaire : ");
   lcd.print(now.hour(), DEC);
-  //lcd.print(':');
+  lcd.print(":");
   lcd.print(now.minute(), DEC);
-  //lcd.print(':');
-  lcd.print(now.second(), DEC);
+
+  lcd.setCursor(0, 1);
+  lcd.print("ouv:");
+  lcd.print(heureOuverture.hour(), DEC);
+  lcd.print(':');
+  lcd.print(heureOuverture.minute(), DEC);
+
+  lcd.print(" fer:");
+  lcd.print(heureFermeture.hour(), DEC);
+  lcd.print(":");
+  lcd.print(heureFermeture.minute(), DEC);
+
+  // Action sur la porte
+  if(now.hour()==heureOuverture.hour() && now.minute()==heureOuverture.minute())
+    ouverturePorte(true);
+  else if (now.hour()==heureFermeture.hour() && now.minute()==heureFermeture.minute())
+    ouverturePorte(false);
 
 }
 
