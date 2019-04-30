@@ -7,13 +7,17 @@
 const byte pinLedRouge=2, pinLedVerte=3;
 const byte pinBuzzer=22;
 const byte pinBoutonPorte=12, pinBoutonMode=11, pinPhotoCell=0;
+const int seuilLuminosite=500;                                          // TODO: A definir
+const DateTime heureOuverture = DateTime(2019, 04, 30, 7, 00, 00);      // TODO: A definir
+const DateTime heureFermeture = DateTime(2019, 04, 30, 20, 00, 00);     // TODO: A definir
+const long interval = 1000;                                             // TODO: A definir
 
 // Declaration des variables globales
 byte mode; // 1: Mode bouton, 2: Mode Luminosité, 3: Mode horaire
 bool etatBouton, dernierEtatBouton, etatBoutonMode, dernierEtatBoutonMode;
 bool etatPorte;
 int etatPhotoCell;
-DateTime heureOuverture, heureFermeture;
+DateTime now;
 
 // Declaration du LCD (numero de pin)
 LiquidCrystal lcd(38, 39, 40, 41, 42, 43);
@@ -30,10 +34,6 @@ void setup() {
   rtc.begin();
   // Decommenter la ligne suivante pour initialiser l'horloge a la date de la compilation
   //rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-
-  // Initialisation des heures d'ouverture et de fermeture
-  heureOuverture = DateTime(2019, 04, 30, 7, 00, 00);
-  heureFermeture = DateTime(2019, 04, 30, 20, 00, 00);
 
   // Initialisation des variables
   mode=1;
@@ -77,7 +77,7 @@ void loop() {
     break;
   }
 
-  delay(100);
+  delay(300);
 
 }
 
@@ -129,6 +129,10 @@ void modeBouton() {
 // Fonction : Mode 2 : Luminosite
 void modeLuminosite() {
 
+  unsigned long previousMillis = 0;
+  unsigned long currentMillis = millis();
+  now = rtc.now();
+
   // Lecture de la photocell
   etatPhotoCell=analogRead(pinPhotoCell);
 
@@ -140,12 +144,30 @@ void modeLuminosite() {
   lcd.print("                  ");
 
   // Action sur la porte
-  if(etatPhotoCell>500)
-    ouverturePorte(true);
-  else
-    ouverturePorte(false);
+  // Si la luminosite est superieure a ... dans l'intervale horraire ... pendant x, on ouvre la porte
+  if(now.hour()>5 && now.hour()<10) {
+    if(etatPhotoCell>seuilLuminosite) {
+      if (currentMillis - previousMillis >= interval) {
+        previousMillis = currentMillis;
+        ouverturePorte(true);
+      }
+    }
+    else {
+      previousMillis = currentMillis;
+    }
+  }
 
-  delay(200);
+  if(now.hour()>16 && now.hour()<23) {
+    if(etatPhotoCell<seuilLuminosite) {
+      if (currentMillis - previousMillis >= interval) {
+        previousMillis = currentMillis;
+        ouverturePorte(false);
+      }
+    }
+    else {
+      previousMillis = currentMillis;
+    }
+  }
 
 }
 
@@ -153,7 +175,7 @@ void modeLuminosite() {
 void modeHorraire() {
 
   // Aquisition de l'heure actuelle
-  DateTime now = rtc.now();
+  now = rtc.now();
 
   // Mise a jour du LCD
   lcd.setCursor(0, 0);
@@ -182,7 +204,7 @@ void modeHorraire() {
 }
 
 // Fonction déplacement de la porte (Juste des leds pour simuler pour l'instant)
-// Param : Bool 1: action d'ouvrir la porteOuvert
+// @Param : Bool 1: action d'ouvrir la porteOuvert
 //              2: action de fermer la porte
 // Return : état de la porte
 bool ouverturePorte(bool ouvrir) {
@@ -205,7 +227,7 @@ bool ouverturePorte(bool ouvrir) {
 }
 
 // Fonction faire un BIP sonore
-// Param : char duree du bip
+// @Param : char duree du bip
 void buzz(char duree) {
   digitalWrite(pinBuzzer,LOW);
   delay(duree);
