@@ -20,7 +20,6 @@ LiquidCrystal lcd(38, 39, 40, 41, 42, 43);
 
 // Declaration de l'horloge
 RTC_DS3231 rtc;
-char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 
 void setup() {
 
@@ -61,11 +60,8 @@ void setup() {
 
 void loop() {
 
-  // Caclul du mode
-  mode=calculMode();
-
   // Selection du mode
-  switch (mode)
+  switch (calculMode())
   {
     case 1: // Mode 1 : Bouton
       modeBouton();
