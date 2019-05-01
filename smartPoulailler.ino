@@ -10,7 +10,11 @@ const byte pinBoutonPorte=12, pinBoutonMode=11, pinPhotoCell=0;
 const int seuilLuminosite=500;                                          // TODO: A definir
 const DateTime heureOuverture = DateTime(2019, 04, 30, 7, 00, 00);      // TODO: A definir
 const DateTime heureFermeture = DateTime(2019, 04, 30, 20, 00, 00);     // TODO: A definir
-const long interval = 1000;                                             // TODO: A definir
+const long interval = 5000;                                             // TODO: A definir
+const byte heureMatinMin = 5;
+const byte heureMatinMax = 10;
+const byte heureSoirMin = 16;
+const byte heureSoirMax = 23;
 
 // Declaration des variables globales
 byte mode; // 1: Mode bouton, 2: Mode Luminosité, 3: Mode horaire
@@ -18,6 +22,7 @@ bool etatBouton, dernierEtatBouton, etatBoutonMode, dernierEtatBoutonMode;
 bool etatPorte;
 int etatPhotoCell;
 DateTime now;
+unsigned long previousMillis;
 
 // Declaration du LCD (numero de pin)
 LiquidCrystal lcd(38, 39, 40, 41, 42, 43);
@@ -42,6 +47,7 @@ void setup() {
   etatBoutonMode=HIGH;
   dernierEtatBoutonMode=HIGH;
   etatPorte=LOW;
+  previousMillis = 0;
 
   // Initialisation du mode des PIN
   pinMode(pinLedRouge,OUTPUT);
@@ -91,6 +97,7 @@ byte calculMode() {
   // Gestion du bouton
   if(etatBoutonMode!=dernierEtatBoutonMode && etatBoutonMode==LOW) {
     buzz(100);
+    previousMillis = 0; // Pour le mode luminosite : Reinitialisation a chaque appui sur le bouton mode
     mode++;
     if (mode > 3)
       mode=1;
@@ -129,7 +136,6 @@ void modeBouton() {
 // Fonction : Mode 2 : Luminosite
 void modeLuminosite() {
 
-  unsigned long previousMillis = 0;
   unsigned long currentMillis = millis();
   now = rtc.now();
 
@@ -145,8 +151,8 @@ void modeLuminosite() {
 
   // Action sur la porte
   // Si la luminosite est superieure a ... dans l'intervale horraire ... pendant x, on ouvre la porte
-  if(now.hour()>5 && now.hour()<10) {
-    if(etatPhotoCell>seuilLuminosite) {
+  if(now.hour()>=heureMatinMin && now.hour()<heureMatinMax) {
+    if(etatPhotoCell>seuilLuminosite && previousMillis != 0) {
       if (currentMillis - previousMillis >= interval) {
         previousMillis = currentMillis;
         ouverturePorte(true);
@@ -157,8 +163,8 @@ void modeLuminosite() {
     }
   }
 
-  if(now.hour()>16 && now.hour()<23) {
-    if(etatPhotoCell<seuilLuminosite) {
+  if(now.hour()>=heureSoirMin && now.hour()<heureSoirMax) {
+    if(etatPhotoCell<seuilLuminosite && previousMillis != 0) {
       if (currentMillis - previousMillis >= interval) {
         previousMillis = currentMillis;
         ouverturePorte(false);
@@ -179,18 +185,18 @@ void modeHorraire() {
 
   // Mise a jour du LCD
   lcd.setCursor(0, 0);
-  lcd.print("Mode horaire : ");
+  lcd.print("Mode hor : ");
   lcd.print(now.hour(), DEC);
   lcd.print(":");
   lcd.print(now.minute(), DEC);
 
   lcd.setCursor(0, 1);
-  lcd.print("ouv:");
+  lcd.print("");
   lcd.print(heureOuverture.hour(), DEC);
   lcd.print(':');
   lcd.print(heureOuverture.minute(), DEC);
 
-  lcd.print(" fer:");
+  lcd.print("     ");
   lcd.print(heureFermeture.hour(), DEC);
   lcd.print(":");
   lcd.print(heureFermeture.minute(), DEC);
