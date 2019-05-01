@@ -13,11 +13,12 @@ const byte pinDHT=9;
 const int seuilLuminosite=500;                                          // TODO: A definir
 const DateTime heureOuverture = DateTime(2019, 04, 30, 7, 00, 00);      // TODO: A definir
 const DateTime heureFermeture = DateTime(2019, 04, 30, 20, 00, 00);     // TODO: A definir
-const long interval = 5000;                                             // TODO: A definir
+const long tempoLuminosite = 5000;                                      // TODO: A definir
 const byte heureMatinMin = 5;
 const byte heureMatinMax = 10;
 const byte heureSoirMin = 16;
 const byte heureSoirMax = 23;
+const long tempoTemperature = 60000;
 
 // Declaration des variables globales
 byte mode; // 1: Mode bouton, 2: Mode Luminosité, 3: Mode horaire
@@ -25,10 +26,11 @@ bool etatBouton, dernierEtatBouton, etatBoutonMode, dernierEtatBoutonMode;
 bool etatPorte;
 int etatPhotoCell;
 DateTime now;
-unsigned long previousMillis, currentMillis;
+unsigned long currentMillis;
+unsigned long previousMillisLuminosite, previousMillisTemperature;
 SimpleDHT11 dht11(pinDHT);
-byte temperature = 0;
-byte humidity = 0;
+byte temperature;
+byte humidity;
 
 // Declaration du LCD (numero de pin)
 LiquidCrystal lcd(38, 39, 40, 41, 42, 43);
@@ -53,7 +55,8 @@ void setup() {
   etatBoutonMode=HIGH;
   dernierEtatBoutonMode=HIGH;
   etatPorte=LOW;
-  previousMillis = 0;
+  previousMillisLuminosite = 0;
+  previousMillisTemperature = 0;
 
   // Initialisation du mode des PIN
   pinMode(pinLedRouge,OUTPUT);
@@ -68,11 +71,16 @@ void setup() {
   // Initialisation du LCD
   lcd.begin(16, 2);
 
+  // Premiere aquisition de la temperature
+  dht11.read(&temperature, &humidity, NULL);
+
 }
 
 void loop() {
 
   currentMillis = millis();
+
+  AffichageTemperature();
 
   // Selection du mode
   switch (calculMode())
@@ -91,16 +99,6 @@ void loop() {
     break;
   }
 
-  // Affichage de la temperature et de l'humidite sur la deuxieme ligne
-  dht11.read(&temperature, &humidity, NULL);
-  lcd.setCursor(0, 1);
-  lcd.print("T:");
-  lcd.print((int)temperature);
-  lcd.print("C");
-  lcd.print("   H:");
-  lcd.print((int)humidity);
-  lcd.print("%      ");
-
   delay(300);
 
 }
@@ -115,7 +113,7 @@ byte calculMode() {
   // Gestion du bouton
   if(etatBoutonMode!=dernierEtatBoutonMode && etatBoutonMode==LOW) {
     buzz(100);
-    previousMillis = 0; // Pour le mode luminosite : Reinitialisation a chaque appui sur le bouton mode
+    previousMillisLuminosite = 0; // Pour le mode luminosite : Reinitialisation a chaque appui sur le bouton mode
     mode++;
     if (mode > 3)
       mode=1;
@@ -163,28 +161,28 @@ void modeLuminosite() {
   lcd.print("          ");
 
   // Action sur la porte
-  // Si la luminosite est superieure a ... dans l'intervale horraire ... pendant x, on ouvre la porte
+  // Si la luminosite est superieure a ... dans l'tempoLuminositee horraire ... pendant x, on ouvre la porte
   if(now.hour()>=heureMatinMin && now.hour()<heureMatinMax) {
-    if(etatPhotoCell>seuilLuminosite && previousMillis != 0) {
-      if (currentMillis - previousMillis >= interval) {
-        previousMillis = currentMillis;
+    if(etatPhotoCell>seuilLuminosite && previousMillisLuminosite != 0) {
+      if (currentMillis - previousMillisLuminosite >= tempoLuminosite) {
+        previousMillisLuminosite = currentMillis;
         ouverturePorte(true);
       }
     }
     else {
-      previousMillis = currentMillis;
+      previousMillisLuminosite = currentMillis;
     }
   }
 
   if(now.hour()>=heureSoirMin && now.hour()<heureSoirMax) {
-    if(etatPhotoCell<seuilLuminosite && previousMillis != 0) {
-      if (currentMillis - previousMillis >= interval) {
-        previousMillis = currentMillis;
+    if(etatPhotoCell<seuilLuminosite && previousMillisLuminosite != 0) {
+      if (currentMillis - previousMillisLuminosite >= tempoLuminosite) {
+        previousMillisLuminosite = currentMillis;
         ouverturePorte(false);
       }
     }
     else {
-      previousMillis = currentMillis;
+      previousMillisLuminosite = currentMillis;
     }
   }
 
@@ -233,6 +231,25 @@ bool ouverturePorte(bool ouvrir) {
   }
   else
     return 0;
+}
+
+// Fonction : Aquisition toutes les "tempoTemperature" ms et affichage sur ligne 2 LCD
+void AffichageTemperature() {
+  // Aquisition de la temperature toute les minutes
+  if (currentMillis - previousMillisTemperature >= tempoTemperature) {
+    previousMillisTemperature = currentMillis;
+    dht11.read(&temperature, &humidity, NULL);
+  }
+
+  // Affichage de la temperature et de l'humidite sur la deuxieme ligne
+  lcd.setCursor(0, 1);
+  lcd.print("T:");
+  lcd.print((int)temperature);
+  lcd.print("C");
+  lcd.print("   H:");
+  lcd.print((int)humidity);
+  lcd.print("%      ");
+
 }
 
 // Fonction faire un BIP sonore
