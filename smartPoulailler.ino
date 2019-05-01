@@ -2,11 +2,14 @@
 #include <LiquidCrystal.h>  // LCD
 #include <Wire.h>           // RTC
 #include <RTClib.h>         // RTC
+#include <SimpleDHT.h>      // Temp + Humidity
 
 // Declaration des constantes
 const byte pinLedRouge=2, pinLedVerte=3;
 const byte pinBuzzer=22;
-const byte pinBoutonPorte=12, pinBoutonMode=11, pinPhotoCell=0;
+const byte pinBoutonPorte=12, pinBoutonMode=11;
+const byte pinPhotoCell=0;
+const byte pinDHT=9;
 const int seuilLuminosite=500;                                          // TODO: A definir
 const DateTime heureOuverture = DateTime(2019, 04, 30, 7, 00, 00);      // TODO: A definir
 const DateTime heureFermeture = DateTime(2019, 04, 30, 20, 00, 00);     // TODO: A definir
@@ -23,6 +26,9 @@ bool etatPorte;
 int etatPhotoCell;
 DateTime now;
 unsigned long previousMillis, currentMillis;
+SimpleDHT11 dht11(pinDHT);
+byte temperature = 0;
+byte humidity = 0;
 
 // Declaration du LCD (numero de pin)
 LiquidCrystal lcd(38, 39, 40, 41, 42, 43);
@@ -85,6 +91,16 @@ void loop() {
     break;
   }
 
+  // Affichage de la temperature et de l'humidite sur la deuxieme ligne
+  dht11.read(&temperature, &humidity, NULL);
+  lcd.setCursor(0, 1);
+  lcd.print("T:");
+  lcd.print((int)temperature);
+  lcd.print("C");
+  lcd.print("   H:");
+  lcd.print((int)humidity);
+  lcd.print("%      ");
+
   delay(300);
 
 }
@@ -120,10 +136,7 @@ void modeBouton() {
 
   // Mise a jour du LCD
   lcd.setCursor(0, 0);
-  lcd.print("Mode manu              ");
-  lcd.setCursor(0, 1);
-  lcd.print(etatBouton);
-  lcd.print("                   ");
+  lcd.print("Mode manu                   ");
 
   // Action sur la porte
   if(etatBouton!=dernierEtatBouton && etatBouton==LOW) {
@@ -145,10 +158,9 @@ void modeLuminosite() {
 
   // Mise a jour du LCD
   lcd.setCursor(0, 0);
-  lcd.print("Mode auto :           ");
-  lcd.setCursor(0, 1);
+  lcd.print("Mode auto : ");
   lcd.print(etatPhotoCell);
-  lcd.print("                  ");
+  lcd.print("          ");
 
   // Action sur la porte
   // Si la luminosite est superieure a ... dans l'intervale horraire ... pendant x, on ouvre la porte
@@ -186,21 +198,11 @@ void modeHorraire() {
 
   // Mise a jour du LCD
   lcd.setCursor(0, 0);
-  lcd.print("Mode hor : ");
-  lcd.print(now.hour(), DEC);
-  lcd.print(":");
-  lcd.print(now.minute(), DEC);
-
-  lcd.setCursor(0, 1);
-  lcd.print("");
+  lcd.print("Mode H : ");
   lcd.print(heureOuverture.hour(), DEC);
-  lcd.print(':');
-  lcd.print(heureOuverture.minute(), DEC);
-
-  lcd.print("     ");
+  lcd.print("H-");
   lcd.print(heureFermeture.hour(), DEC);
-  lcd.print(":");
-  lcd.print(heureFermeture.minute(), DEC);
+  lcd.print("H       ");
 
   // Action sur la porte
   if(now.hour()==heureOuverture.hour() && now.minute()==heureOuverture.minute())
