@@ -22,7 +22,7 @@ bool etatBouton, dernierEtatBouton, etatBoutonMode, dernierEtatBoutonMode;
 bool etatPorte;
 int etatPhotoCell;
 DateTime now;
-unsigned long previousMillis;
+unsigned long previousMillis, currentMillis;
 
 // Declaration du LCD (numero de pin)
 LiquidCrystal lcd(38, 39, 40, 41, 42, 43);
@@ -65,6 +65,8 @@ void setup() {
 }
 
 void loop() {
+
+  currentMillis = millis();
 
   // Selection du mode
   switch (calculMode())
@@ -136,7 +138,6 @@ void modeBouton() {
 // Fonction : Mode 2 : Luminosite
 void modeLuminosite() {
 
-  unsigned long currentMillis = millis();
   now = rtc.now();
 
   // Lecture de la photocell
