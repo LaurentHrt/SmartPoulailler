@@ -74,6 +74,8 @@ void setup() {
   // Premiere aquisition de la temperature
   dht11.read(&temperature, &humidity, NULL);
 
+  buzz(100);
+
 }
 
 void loop() {
@@ -99,7 +101,7 @@ void loop() {
     break;
   }
 
-  delay(300);
+  delay(100);
 
 }
 
