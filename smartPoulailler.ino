@@ -3,6 +3,8 @@
 #include <Wire.h>           // RTC
 #include <RTClib.h>         // RTC
 #include <SimpleDHT.h>      // Temp + Humidity
+#include <TimeLord.h>       // Sunrise-sunset
+#include <Time.h>
 
 // Declaration des constantes
 const byte pinLedRouge=2, pinLedVerte=3;
@@ -11,14 +13,15 @@ const byte pinBoutonPorte=12, pinBoutonMode=11;
 const byte pinPhotoCell=0;
 const byte pinDHT=9;
 const int seuilLuminosite=500;                                          // TODO: A definir
-const DateTime heureOuverture = DateTime(2019, 04, 30, 7, 00, 00);      // TODO: A definir
-const DateTime heureFermeture = DateTime(2019, 04, 30, 20, 00, 00);     // TODO: A definir
 const long tempoLuminosite = 5000;                                      // TODO: A definir
 const byte heureMatinMin = 5;
 const byte heureMatinMax = 10;
 const byte heureSoirMin = 16;
 const byte heureSoirMax = 23;
 const long tempoTemperature = 60000;
+const long tempoSemaine = 604800000;
+const float LONGITUDE = 7.139;
+const float LATITUDE = 47.729;
 
 // Declaration des variables globales
 byte mode; // 1: Mode bouton, 2: Mode Luminosité, 3: Mode horaire
@@ -27,10 +30,15 @@ bool etatPorte;
 int etatPhotoCell;
 DateTime now;
 unsigned long currentMillis;
-unsigned long previousMillisLuminosite, previousMillisTemperature;
+unsigned long previousMillisLuminosite, previousMillisTemperature, previousMillisSemaine;
 SimpleDHT11 dht11(pinDHT);
 byte temperature;
 byte humidity;
+TimeLord tardis;
+byte heureOuverture;
+byte heureFermeture;
+byte sunrise;
+byte sunset;
 
 // Declaration du LCD (numero de pin)
 LiquidCrystal lcd(38, 39, 40, 41, 42, 43);
@@ -60,6 +68,7 @@ void setup() {
   etatPorte=LOW;
   previousMillisLuminosite = 0;
   previousMillisTemperature = 0;
+  previousMillisSemaine = 0;
 
   // Initialisation du mode des PIN
   pinMode(pinLedRouge,OUTPUT);
@@ -74,15 +83,30 @@ void setup() {
   // Initialisation du LCD
   lcd.begin(16, 2);
 
+  // Aquisition de l'heure actuelle
+  now = rtc.now();
+
   // Premiere aquisition de la temperature
   dht11.read(&temperature, &humidity, NULL);
 
+  // Initialisation pour le calcul sunrise-sunset
+  tardis.TimeZone(1 * 60); // tell TimeLord what timezone your RTC is synchronized to. You can ignore DST
+  // as long as the RTC never changes back and forth between DST and non-DST
+  tardis.Position(LATITUDE, LONGITUDE); // tell TimeLord where in the world we are
+
+  calculSunriseSunset();
+
+  // Buzz du demarrage
   buzz(100);
 
 }
 
 void loop() {
 
+  // Maj de l'heure actuelle
+  now = rtc.now();
+
+  // Maj des millis (milliseconde depuis le demarrage)
   currentMillis = millis();
 
   AffichageTemperature();
@@ -102,6 +126,12 @@ void loop() {
     default:
 
     break;
+  }
+
+  // Pour une execution toutes les semaines
+  if (currentMillis - previousMillisSemaine >= tempoSemaine) {
+    previousMillisSemaine = currentMillis;
+    calculSunriseSunset();
   }
 
   delay(100);
@@ -154,8 +184,6 @@ void modeBouton() {
 // Fonction : Mode 2 : Luminosite
 void modeLuminosite() {
 
-  now = rtc.now();
-
   // Lecture de la photocell
   etatPhotoCell=analogRead(pinPhotoCell);
 
@@ -196,22 +224,35 @@ void modeLuminosite() {
 // Fonction : Mode 3 : Horaire
 void modeHorraire() {
 
-  // Aquisition de l'heure actuelle
-  now = rtc.now();
+  heureOuverture = sunrise;
+  heureFermeture = sunset + 2;
 
   // Mise a jour du LCD
   lcd.setCursor(0, 0);
   lcd.print("Mode H : ");
-  lcd.print(heureOuverture.hour(), DEC);
+  lcd.print(heureOuverture);
   lcd.print("H-");
-  lcd.print(heureFermeture.hour(), DEC);
+  lcd.print(heureFermeture);
   lcd.print("H       ");
 
   // Action sur la porte
-  if(now.hour()==heureOuverture.hour() && now.minute()==heureOuverture.minute())
+  if(now.hour()==heureOuverture)
     ouverturePorte(true);
-  else if (now.hour()==heureFermeture.hour() && now.minute()==heureFermeture.minute())
+  else if (now.hour()==heureFermeture)
     ouverturePorte(false);
+
+}
+
+// Fonction qui calcul les heures de sunrise et de sunset;
+void calculSunriseSunset () {
+
+  byte today[] = {0, 0, 12, now.day(), now.month(), now.year()}; // store today's date (at noon) in an array for TimeLord to use
+
+  tardis.SunRise(today);
+  sunrise=today[tl_hour];
+
+  tardis.SunSet(today);
+  sunset=today[tl_hour];
 
 }
 
@@ -240,6 +281,7 @@ bool ouverturePorte(bool ouvrir) {
 
 // Fonction : Aquisition toutes les "tempoTemperature" ms et affichage sur ligne 2 LCD
 void AffichageTemperature() {
+
   // Aquisition de la temperature toute les minutes
   if (currentMillis - previousMillisTemperature >= tempoTemperature) {
     previousMillisTemperature = currentMillis;
