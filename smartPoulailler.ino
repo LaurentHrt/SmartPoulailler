@@ -53,11 +53,8 @@ void setup() {
 
   // Demarrage de l'horloge
   rtc.begin();
-  if (! RTC.isrunning()) {
-   RTC.adjust(DateTime(__DATE__, __TIME__));
- }
   // Decommenter la ligne suivante pour initialiser l'horloge a la date de la compilation
-  //rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+  rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
 
   // Initialisation des variables
   mode=1;
