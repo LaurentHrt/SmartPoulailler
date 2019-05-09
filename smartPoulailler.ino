@@ -18,7 +18,7 @@ const byte heureMatinMin = 5;
 const byte heureMatinMax = 10;
 const byte heureSoirMin = 16;
 const byte heureSoirMax = 23;
-const long tempoTemperature = 60000;  //
+const long tempoMinute = 60000;  //
 const long tempoSemaine = 604800000;  // Nombre de milliseconde dans une semaine
 const float LONGITUDE = 7.139;        // Longitude de Burnhaupt
 const float LATITUDE = 47.729;        // Lattitude de Burnhaupt
@@ -32,7 +32,7 @@ bool etatPorte;
 int etatPhotoCell;
 DateTime now;
 unsigned long currentMillis;
-unsigned long previousMillisLuminosite, previousMillisTemperature, previousMillisSemaine;
+unsigned long previousMillisLuminosite, previousMillisMinute, previousMillisSemaine;
 SimpleDHT11 dht11(pinDHT);
 byte temperature;
 byte humidity;
@@ -65,7 +65,7 @@ void setup() {
   dernierEtatBoutonMode=HIGH;
   etatPorte=LOW;
   previousMillisLuminosite = 0;
-  previousMillisTemperature = 0;
+  previousMillisMinute = 0;
   previousMillisSemaine = 0;
 
   // Initialisation du mode des PIN
@@ -84,15 +84,14 @@ void setup() {
   // Aquisition de l'heure actuelle
   now = rtc.now();
 
-  // Premiere aquisition de la temperature
-  dht11.read(&temperature, &humidity, NULL);
-
   // Initialisation pour le calcul sunrise-sunset
   tardis.TimeZone(1 * 60); // tell TimeLord what timezone your RTC is synchronized to. You can ignore DST
   // as long as the RTC never changes back and forth between DST and non-DST
   tardis.Position(LATITUDE, LONGITUDE); // tell TimeLord where in the world we are
 
+  // Execution de fonctions pour initialisation
   calculSunriseSunset();
+  dht11.read(&temperature, &humidity, NULL);
 
   // Buzz du demarrage
   buzz(100);
@@ -126,9 +125,17 @@ void loop() {
     break;
   }
 
-  // Pour une execution toutes les semaines
+  // Execution toutes les minutes
+  if (currentMillis - previousMillisMinute >= tempoMinute) {
+    previousMillisMinute = currentMillis;
+
+    dht11.read(&temperature, &humidity, NULL);
+  }
+
+  // Execution toutes les semaines
   if (currentMillis - previousMillisSemaine >= tempoSemaine) {
     previousMillisSemaine = currentMillis;
+
     calculSunriseSunset();
   }
 
@@ -192,7 +199,7 @@ void modeLuminosite() {
   lcd.print("          ");
 
   // Action sur la porte
-  // Si la luminosite est superieure a ... dans l'tempoLuminositee horraire ... pendant x, on ouvre la porte
+  // Si la luminosite est superieure a ... dans la plage horraire horraire ... pendant x, on ouvre la porte
   if(now.hour()>=heureMatinMin && now.hour()<heureMatinMax) {
     if(etatPhotoCell>seuilLuminosite && previousMillisLuminosite != 0) {
       if (currentMillis - previousMillisLuminosite >= tempoLuminosite) {
@@ -292,14 +299,8 @@ bool ouverturePorte(bool ouvrir) {
     return 0;
 }
 
-// Fonction : Aquisition toutes les "tempoTemperature" ms et affichage sur ligne 2 LCD
+// Fonction : Aquisition toutes les "tempoMinute" ms et affichage sur ligne 2 LCD
 void AffichageTemperature() {
-
-  // Aquisition de la temperature toute les minutes
-  if (currentMillis - previousMillisTemperature >= tempoTemperature) {
-    previousMillisTemperature = currentMillis;
-    dht11.read(&temperature, &humidity, NULL);
-  }
 
   // Affichage de la temperature et de l'humidite sur la deuxieme ligne
   lcd.setCursor(0, 1);
