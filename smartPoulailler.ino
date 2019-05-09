@@ -40,7 +40,6 @@ TimeLord tardis;
 byte heureOuverture[2];         // Tableau de 2 cases : [heure,minute]
 byte heureFermeture[2];         // Tableau de 2 cases : [heure,minute]
 
-
 // Declaration du LCD (numero de pin)
 LiquidCrystal lcd(38, 39, 40, 41, 42, 43);
 
@@ -223,6 +222,13 @@ void modeLuminosite() {
       previousMillisLuminosite = currentMillis;
     }
   }
+
+  // Securite : ouverture/fermeture de la porte aux horaires max du matin/soir
+  if(now.hour()==heureMatinMax)
+    ouverturePorte(true);
+  if(now.hour()==heureSoirMax)
+    ouverturePorte(false);
+
 
 }
 
