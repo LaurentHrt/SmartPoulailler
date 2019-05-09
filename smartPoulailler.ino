@@ -37,8 +37,8 @@ SimpleDHT11 dht11(pinDHT);
 byte temperature;
 byte humidity;
 TimeLord tardis;
-byte heureOuverture[2];         // Tableau de 2 cases : [heure,minute]
-byte heureFermeture[2];         // Tableau de 2 cases : [heure,minute]
+int heureOuverture[2];         // Tableau de 2 cases : [heure,minute]
+int heureFermeture[2];         // Tableau de 2 cases : [heure,minute]
 
 // Declaration du LCD (numero de pin)
 LiquidCrystal lcd(38, 39, 40, 41, 42, 43);
@@ -91,6 +91,7 @@ void setup() {
   // Execution de fonctions pour initialisation
   calculSunriseSunset();
   dht11.read(&temperature, &humidity, NULL);
+  ouverturePorte(true);
 
   // Buzz du demarrage
   buzz(100);
@@ -276,8 +277,8 @@ void calculSunriseSunset () {
   heureFermeture[1] = today[tl_minute] + offsetApresSunset;
 
   if (heureFermeture[1] > 59) {
-    heureOuverture[0] = heureOuverture[0] + 1;
-    heureOuverture[1] = heureOuverture[1] - 60;
+    heureFermeture[0] = heureFermeture[0] + 1;
+    heureFermeture[1] = heureFermeture[1] - 60;
   }
 
 }
