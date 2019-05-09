@@ -256,7 +256,7 @@ void calculSunriseSunset () {
   // Calcul du Sunrise et affectation des variables heureOuverture
   tardis.SunRise(today);
   heureOuverture[0] = today[tl_hour];
-  heureOuverture[1] = today[tl_min] - offsetAvantSunrise;
+  heureOuverture[1] = today[tl_minute] - offsetAvantSunrise;
 
   if (heureOuverture[1] < 0) {
     heureOuverture[0] = heureOuverture[0] - 1;
@@ -267,7 +267,7 @@ void calculSunriseSunset () {
   tardis.SunSet(today);
 
   heureFermeture[0] = today[tl_hour];
-  heureFermeture[1] = today[tl_min] + offsetApresSunset;
+  heureFermeture[1] = today[tl_minute] + offsetApresSunset;
 
   if (heureFermeture[1] > 59) {
     heureOuverture[0] = heureOuverture[0] + 1;
