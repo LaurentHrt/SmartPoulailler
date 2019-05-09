@@ -18,10 +18,12 @@ const byte heureMatinMin = 5;
 const byte heureMatinMax = 10;
 const byte heureSoirMin = 16;
 const byte heureSoirMax = 23;
-const long tempoTemperature = 60000;
-const long tempoSemaine = 604800000;
-const float LONGITUDE = 7.139;
-const float LATITUDE = 47.729;
+const long tempoTemperature = 60000;  //
+const long tempoSemaine = 604800000;  // Nombre de milliseconde dans une semaine
+const float LONGITUDE = 7.139;        // Longitude de Burnhaupt
+const float LATITUDE = 47.729;        // Lattitude de Burnhaupt
+const byte offsetApresSunset = 60;    // Decalage apres le sunset en minutes
+const byte offsetAvantSunrise = 0;    // Decalage avant le sunrise en minutes
 
 // Declaration des variables globales
 byte mode; // 1: Mode bouton, 2: Mode Luminosité, 3: Mode horaire
@@ -35,10 +37,9 @@ SimpleDHT11 dht11(pinDHT);
 byte temperature;
 byte humidity;
 TimeLord tardis;
-byte heureOuverture;
-byte heureFermeture;
-byte sunrise;
-byte sunset;
+byte heureOuverture[2];         // Tableau de 2 cases : [heure,minute]
+byte heureFermeture[2];         // Tableau de 2 cases : [heure,minute]
+
 
 // Declaration du LCD (numero de pin)
 LiquidCrystal lcd(38, 39, 40, 41, 42, 43);
@@ -221,35 +222,50 @@ void modeLuminosite() {
 // Fonction : Mode 3 : Horaire
 void modeHorraire() {
 
-  heureOuverture = sunrise;
-  heureFermeture = sunset + 2;
-
   // Mise a jour du LCD
   lcd.setCursor(0, 0);
-  lcd.print("Mode H : ");
-  lcd.print(heureOuverture);
-  lcd.print("H-");
-  lcd.print(heureFermeture);
-  lcd.print("H       ");
+  lcd.print(heureOuverture[0]);
+  lcd.print(":");
+  lcd.print(heureOuverture[1]);
+  lcd.print(" - ");
+  lcd.print(heureFermeture[0]);
+  lcd.print(":");
+  lcd.print(heureFermeture[1]);
+  lcd.print("                      ");
 
   // Action sur la porte
-  if(now.hour()==heureOuverture)
+  if(now.hour()==heureOuverture[0] && now.minute()==heureOuverture[1])
     ouverturePorte(true);
-  else if (now.hour()==heureFermeture)
+  else if (now.hour()==heureFermeture[0] && now.minute()==heureFermeture[1])
     ouverturePorte(false);
 
 }
 
-// Fonction qui calcul les heures de sunrise et de sunset;
+// Fonction qui calcul les heures de sunrise et de sunset, et initialisation des variable heureOuverture et heureFermeture;
 void calculSunriseSunset () {
 
   byte today[] = {0, 0, 12, now.day(), now.month(), now.year()}; // store today's date (at noon) in an array for TimeLord to use
 
+  // Calcul du Sunrise et affectation des variables heureOuverture
   tardis.SunRise(today);
-  sunrise=today[tl_hour];
+  heureOuverture[0] = today[tl_hour];
+  heureOuverture[1] = today[tl_min] - offsetAvantSunrise;
 
+  if (heureOuverture[1] < 0) {
+    heureOuverture[0] = heureOuverture[0] - 1;
+    heureOuverture[1] = heureOuverture[1] + 60;
+  }
+
+  // Calcul du Sunset et affectation des variables heureFermeture
   tardis.SunSet(today);
-  sunset=today[tl_hour];
+
+  heureFermeture[0] = today[tl_hour];
+  heureFermeture[1] = today[tl_min] + offsetApresSunset;
+
+  if (heureFermeture[1] > 59) {
+    heureOuverture[0] = heureOuverture[0] + 1;
+    heureOuverture[1] = heureOuverture[1] - 60;
+  }
 
 }
 
