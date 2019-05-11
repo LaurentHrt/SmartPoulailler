@@ -106,10 +106,11 @@ void loop() {
   // Maj des millis (milliseconde depuis le demarrage)
   currentMillis = millis();
 
+  // Maj de l'affichage
   AffichageLCD();
 
   // Selection du mode
-  switch (calculMode())
+  switch (mode = calculMode())
   {
     case 1: // Mode 1 : Bouton
       modeBouton();
@@ -172,10 +173,6 @@ void modeBouton() {
   // Lecture du bouton
   etatBouton=digitalRead(pinBoutonPorte);
 
-  // Mise a jour du LCD
-  lcd.setCursor(0, 0);
-  lcd.print("Mode manu                   ");
-
   // Action sur la porte
   if(etatBouton!=dernierEtatBouton && etatBouton==LOW) {
     ouverturePorte(!etatPorte);
@@ -191,12 +188,6 @@ void modeLuminosite() {
 
   // Lecture de la photocell
   etatPhotoCell=analogRead(pinPhotoCell);
-
-  // Mise a jour du LCD
-  lcd.setCursor(0, 0);
-  lcd.print("Mode auto : ");
-  lcd.print(etatPhotoCell);
-  lcd.print("          ");
 
   // Action sur la porte
   // Si la luminosite est superieure a ... dans la plage horraire horraire ... pendant x, on ouvre la porte
@@ -230,22 +221,10 @@ void modeLuminosite() {
   if(now.hour()==heureSoirMax)
     ouverturePorte(false);
 
-
 }
 
 // Fonction : Mode 3 : Horaire
 void modeHorraire() {
-
-  // Mise a jour du LCD
-  lcd.setCursor(0, 0);
-  lcd.print(heureOuverture[0]);
-  lcd.print(":");
-  lcd.print(heureOuverture[1]);
-  lcd.print(" - ");
-  lcd.print(heureFermeture[0]);
-  lcd.print(":");
-  lcd.print(heureFermeture[1]);
-  lcd.print("                      ");
 
   // Action sur la porte
   if(now.hour()==heureOuverture[0] && now.minute()==heureOuverture[1])
@@ -306,11 +285,11 @@ bool ouverturePorte(bool ouvrir) {
     return 0;
 }
 
-// Fonction : Affichage sur le LCD deuxieme ligne
+// Fonction : Affichage sur le LCD
 void AffichageLCD() {
 
-  // Affichage de la temperature et de l'humidite sur la deuxieme ligne
-  lcd.setCursor(0, 1);
+  // Affichage de l'heure, la temperature et de l'humidite sur la premiere ligne
+  lcd.setCursor(0, 0);
   lcd.print((int)now.hour(), DEC);
   lcd.print(":");
   lcd.print((int)now.minute());
@@ -319,7 +298,34 @@ void AffichageLCD() {
   lcd.print("C");
   lcd.print("  ");
   lcd.print((int)humidity);
-  lcd.print("%");
+  lcd.print("%   ");
+
+  // Affichage de la deuxieme ligne selon le mode
+  lcd.setCursor(0, 1);
+  switch (mode)
+  {
+    case 1: // Mode 1 : Bouton
+      lcd.print("Mode manu                   ");
+    break;
+    case 2: // Mode 2 : Luminosite
+      lcd.print("Mode auto : ");
+      lcd.print(etatPhotoCell);
+      lcd.print("          ");
+    break;
+    case 3: // Mode 3 : Horaire
+      lcd.print(heureOuverture[0]);
+      lcd.print(":");
+      lcd.print(heureOuverture[1]);
+      lcd.print(" - ");
+      lcd.print(heureFermeture[0]);
+      lcd.print(":");
+      lcd.print(heureFermeture[1]);
+      lcd.print("           ");
+    break;
+    default:
+      lcd.print("Erreur");
+    break;
+  }
 
 }
 
