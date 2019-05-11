@@ -16,14 +16,14 @@ const int seuilLuminosite=500;                                          // TODO:
 const long tempoLuminosite = 5000;                                      // TODO: A definir
 const byte heureMatinMin = 5;
 const byte heureMatinMax = 10;
-const byte heureSoirMin = 16;
+const byte heureSoirMin = 18;
 const byte heureSoirMax = 23;
 const long tempoMinute = 60000;  //
 const long tempoSemaine = 604800000;  // Nombre de milliseconde dans une semaine
 const float LONGITUDE = 7.139;        // Longitude de Burnhaupt
 const float LATITUDE = 47.729;        // Lattitude de Burnhaupt
-const byte offsetApresSunset = 60;    // Decalage apres le sunset en minutes
-const byte offsetAvantSunrise = 0;    // Decalage avant le sunrise en minutes
+const int offsetApresSunset = 180;    // Decalage apres le sunset en minutes
+const int offsetAvantSunrise = 0;    // Decalage avant le sunrise en minutes
 
 // Declaration des variables globales
 byte mode; // 1: Mode bouton, 2: Mode Luminosité, 3: Mode horaire
@@ -54,7 +54,7 @@ void setup() {
   // Demarrage de l'horloge
   rtc.begin();
   // Decommenter la ligne suivante pour initialiser l'horloge a la date de la compilation
-  rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+  // rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
 
   // Initialisation des variables
   mode=1;
@@ -106,7 +106,7 @@ void loop() {
   // Maj des millis (milliseconde depuis le demarrage)
   currentMillis = millis();
 
-  AffichageTemperature();
+  AffichageLCD();
 
   // Selection du mode
   switch (calculMode())
@@ -265,7 +265,7 @@ void calculSunriseSunset () {
   heureOuverture[0] = today[tl_hour];
   heureOuverture[1] = today[tl_minute] - offsetAvantSunrise;
 
-  if (heureOuverture[1] < 0) {
+  while (heureOuverture[1] < 0) {
     heureOuverture[0] = heureOuverture[0] - 1;
     heureOuverture[1] = heureOuverture[1] + 60;
   }
@@ -276,7 +276,7 @@ void calculSunriseSunset () {
   heureFermeture[0] = today[tl_hour];
   heureFermeture[1] = today[tl_minute] + offsetApresSunset;
 
-  if (heureFermeture[1] > 59) {
+  while (heureFermeture[1] > 59) {
     heureFermeture[0] = heureFermeture[0] + 1;
     heureFermeture[1] = heureFermeture[1] - 60;
   }
@@ -306,17 +306,20 @@ bool ouverturePorte(bool ouvrir) {
     return 0;
 }
 
-// Fonction : Aquisition toutes les "tempoMinute" ms et affichage sur ligne 2 LCD
-void AffichageTemperature() {
+// Fonction : Affichage sur le LCD deuxieme ligne
+void AffichageLCD() {
 
   // Affichage de la temperature et de l'humidite sur la deuxieme ligne
   lcd.setCursor(0, 1);
-  lcd.print("T:");
+  lcd.print((int)now.hour(), DEC);
+  lcd.print(":");
+  lcd.print((int)now.minute());
+  lcd.print("  ");
   lcd.print((int)temperature);
   lcd.print("C");
-  lcd.print("   H:");
+  lcd.print("  ");
   lcd.print((int)humidity);
-  lcd.print("%      ");
+  lcd.print("%");
 
 }
 
