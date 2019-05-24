@@ -8,6 +8,7 @@
 #include <Stepper.h>        // Moteur pas a pas
 
 // Declaration des constantes
+const byte pinRelai=8;
 const byte pinLedRouge=2, pinLedVerte=3;
 const byte pinBuzzer=22;
 const byte pinBoutonPorte=12, pinBoutonMode=11;
@@ -73,6 +74,7 @@ void setup() {
   previousMillisSemaine = 0;
 
   // Initialisation du mode des PIN
+  pinMode(pinRelai,OUTPUT);
   pinMode(pinLedRouge,OUTPUT);
   pinMode(pinLedVerte,OUTPUT);
   pinMode(pinBuzzer,OUTPUT);
@@ -81,6 +83,7 @@ void setup() {
 
   // Initialisation de l'etat des PIN
   digitalWrite(pinBuzzer,HIGH);
+  digitalWrite(pinRelai,LOW);
 
   // Initialisation du LCD
   lcd.begin(16, 2);
@@ -273,27 +276,41 @@ void calculSunriseSunset () {
 // Return : état de la porte
 bool ouverturePorte(bool ouvrir) {
   if(!etatPorte && ouvrir) {
+    digitalWrite(pinRelai,HIGH);
+    digitalWrite(pinLedRouge,LOW);
+    digitalWrite(pinLedVerte,LOW);
     buzz(50);
+    delay(1000);
 
     myStepper.setSpeed(10); // En tr/min
-    myStepper.step(4096);
+    myStepper.step(1024);
 
     digitalWrite(pinLedRouge,HIGH);
     digitalWrite(pinLedVerte,LOW);
     buzz(100);
 
+    delay(1000);
+    digitalWrite(pinRelai,LOW);
+
     etatPorte=true;
     return etatPorte;
   }
   else if (etatPorte && !ouvrir) {
+    digitalWrite(pinRelai,HIGH);
+    digitalWrite(pinLedRouge,LOW);
+    digitalWrite(pinLedVerte,LOW);
     buzz(50);
+    delay(1000);
 
     myStepper.setSpeed(10); // En tr/min
-    myStepper.step(-4096);
+    myStepper.step(-1024);
 
     digitalWrite(pinLedRouge,LOW);
     digitalWrite(pinLedVerte,HIGH);
     buzz(100);
+    delay(1000);
+
+    digitalWrite(pinRelai,LOW);
 
     etatPorte=false;
     return etatPorte;
