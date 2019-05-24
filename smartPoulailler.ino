@@ -5,6 +5,7 @@
 #include <SimpleDHT.h>      // Temp + Humidity
 #include <TimeLord.h>       // Sunrise-sunset
 #include <Time.h>
+#include <Stepper.h>        // Moteur pas a pas
 
 // Declaration des constantes
 const byte pinLedRouge=2, pinLedVerte=3;
@@ -24,6 +25,7 @@ const float LONGITUDE = 7.139;        // Longitude de Burnhaupt
 const float LATITUDE = 47.729;        // Lattitude de Burnhaupt
 const int offsetApresSunset = 180;    // Decalage apres le sunset en minutes
 const int offsetAvantSunrise = 0;    // Decalage avant le sunrise en minutes
+const float stepsPerRevolution = 2048;  // Nombre de pas par tour
 
 // Declaration des variables globales
 byte mode; // 1: Mode bouton, 2: Mode Luminosité, 3: Mode horaire
@@ -39,6 +41,9 @@ byte humidity;
 TimeLord tardis;
 int heureOuverture[2];         // Tableau de 2 cases : [heure,minute]
 int heureFermeture[2];         // Tableau de 2 cases : [heure,minute]
+
+// Declaration du stepper
+Stepper myStepper(stepsPerRevolution, 53, 51, 52, 50);
 
 // Declaration du LCD (numero de pin)
 LiquidCrystal lcd(38, 39, 40, 41, 42, 43);
@@ -268,16 +273,28 @@ void calculSunriseSunset () {
 // Return : état de la porte
 bool ouverturePorte(bool ouvrir) {
   if(!etatPorte && ouvrir) {
+    buzz(50);
+
+    myStepper.setSpeed(10); // En tr/min
+    myStepper.step(4096);
+
     digitalWrite(pinLedRouge,HIGH);
     digitalWrite(pinLedVerte,LOW);
     buzz(100);
+
     etatPorte=true;
     return etatPorte;
   }
   else if (etatPorte && !ouvrir) {
+    buzz(50);
+
+    myStepper.setSpeed(10); // En tr/min
+    myStepper.step(-4096);
+
     digitalWrite(pinLedRouge,LOW);
     digitalWrite(pinLedVerte,HIGH);
     buzz(100);
+
     etatPorte=false;
     return etatPorte;
   }
