@@ -95,6 +95,9 @@ void setup() {
   digitalWrite(pinStepper3,LOW);
   digitalWrite(pinStepper4,LOW);
 
+  // Allumage du backlight
+  digitalWrite(pinBacklightLCD, HIGH);
+
   // Initialisation du LCD
   lcd.begin(16, 2);
 
@@ -160,6 +163,13 @@ void loop() {
 
   // Execution toutes les minutes pour éteindre le LCD
   if (currentMillis - previousMillisAffichage >= tempoAffichage) {
+
+    Serial.println(currentMillis);
+    Serial.println(previousMillisAffichage);
+    Serial.println(etatLCD);
+
+    previousMillisAffichage = currentMillis;
+
     // On eteint le lcd
     lcd.noDisplay();
     digitalWrite(pinBacklightLCD, LOW);
@@ -183,7 +193,7 @@ byte calculMode() {
 
     buzz(100);
     previousMillisLuminosite = 0; // Pour le mode luminosite : Reinitialisation a chaque appui sur le bouton mode
-    previousMillisAffichage = 0; // A chaque appui sur le bouton, on recommence a compter
+    previousMillisAffichage = currentMillis; // A chaque appui sur le bouton, on recommence a compter
 
     // Si le LCD est eteint, on l'allume, sinon on change de mode
     if (!etatLCD) {
@@ -215,7 +225,8 @@ void modeBouton() {
   // Action sur la porte
   if(etatBouton!=dernierEtatBouton && etatBouton==LOW) {
 
-    previousMillisAffichage = 0; // A chaque appui sur le bouton, on recommence a compter
+    buzz(100);
+    previousMillisAffichage = currentMillis; // A chaque appui sur le bouton, on recommence a compter
 
     // Si le lcd est eteint, on l'allume, sinon on actionne la porte
     if (!etatLCD) {
