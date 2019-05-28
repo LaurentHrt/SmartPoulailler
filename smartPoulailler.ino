@@ -8,6 +8,7 @@
 #include <Stepper.h>        // Moteur pas a pas
 
 // Declaration des constantes
+const byte pinBacklightLCD=A1;
 const byte pinStepper1=50, pinStepper2=51, pinStepper3=52, pinStepper4=53;
 const byte pinLedRouge=2, pinLedVerte=3;
 const byte pinBuzzer=22;
@@ -79,6 +80,7 @@ void setup() {
   pinMode(pinBuzzer,OUTPUT);
   pinMode(pinBoutonPorte,INPUT_PULLUP);
   pinMode(pinBoutonMode,INPUT_PULLUP);
+  pinMode(pinBacklightLCD, OUTPUT);
 
   // Initialisation de l'etat des PIN
   digitalWrite(pinBuzzer,HIGH);
@@ -143,6 +145,10 @@ void loop() {
     previousMillisMinute = currentMillis;
 
     dht11.read(&temperature, &humidity, NULL);
+
+    // On eteint le lcd
+    lcd.noDisplay();
+    digitalWrite(pinBacklightLCD, LOW);
   }
 
   // Execution toutes les semaines
@@ -170,6 +176,10 @@ byte calculMode() {
     mode++;
     if (mode > 3)
       mode=1;
+
+    // Rallumage du lcd
+    lcd.display();
+    digitalWrite(pinBacklightLCD, HIGH);
   }
 
   // Mise en memoire du dernier etat du bouton
@@ -187,6 +197,10 @@ void modeBouton() {
 
   // Action sur la porte
   if(etatBouton!=dernierEtatBouton && etatBouton==LOW) {
+    // Rallumage du lcd
+    lcd.display();
+    digitalWrite(pinBacklightLCD, HIGH);
+
     ouverturePorte(!etatPorte);
   }
 
