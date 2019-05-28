@@ -23,6 +23,7 @@ const byte heureSoirMin = 18;
 const byte heureSoirMax = 23;
 const long tempoMinute = 60000;  //
 const long tempoSemaine = 604800000;  // Nombre de milliseconde dans une semaine
+const long tempoAffichage = 60000;  // Temporisation de une minute pour eteindre l'affichage
 const float LONGITUDE = 7.139;        // Longitude de Burnhaupt
 const float LATITUDE = 47.729;        // Lattitude de Burnhaupt
 const int offsetApresSunset = 180;    // Decalage apres le sunset en minutes
@@ -31,12 +32,13 @@ const float stepsPerRevolution = 2048;  // Nombre de pas par tour
 
 // Declaration des variables globales
 byte mode; // 1: Mode bouton, 2: Mode Luminosité, 3: Mode horaire
+bool etatLCD; // False = LCD eteint; true = LCD allumé
 bool etatBouton, dernierEtatBouton, etatBoutonMode, dernierEtatBoutonMode;
 bool etatPorte;
 int etatPhotoCell;
 DateTime now;
 unsigned long currentMillis;
-unsigned long previousMillisLuminosite, previousMillisMinute, previousMillisSemaine;
+unsigned long previousMillisLuminosite, previousMillisMinute, previousMillisSemaine, previousMillisAffichage;
 SimpleDHT11 dht11(pinDHT);
 byte temperature;
 byte humidity;
@@ -65,6 +67,7 @@ void setup() {
 
   // Initialisation des variables
   mode=1;
+  etatLCD=true;
   etatBouton=LOW;
   dernierEtatBouton=HIGH;
   etatBoutonMode=HIGH;
@@ -73,6 +76,7 @@ void setup() {
   previousMillisLuminosite = 0;
   previousMillisMinute = 0;
   previousMillisSemaine = 0;
+  previousMillisAffichage = 0;
 
   // Initialisation du mode des PIN
   pinMode(pinLedRouge,OUTPUT);
@@ -90,6 +94,9 @@ void setup() {
   digitalWrite(pinStepper2,LOW);
   digitalWrite(pinStepper3,LOW);
   digitalWrite(pinStepper4,LOW);
+
+  // Allumage du backlight
+  digitalWrite(pinBacklightLCD, HIGH);
 
   // Initialisation du LCD
   lcd.begin(16, 2);
@@ -145,10 +152,6 @@ void loop() {
     previousMillisMinute = currentMillis;
 
     dht11.read(&temperature, &humidity, NULL);
-
-    // On eteint le lcd
-    lcd.noDisplay();
-    digitalWrite(pinBacklightLCD, LOW);
   }
 
   // Execution toutes les semaines
@@ -157,6 +160,22 @@ void loop() {
 
     calculSunriseSunset();
   }
+
+  // Execution toutes les minutes pour éteindre le LCD
+  if (currentMillis - previousMillisAffichage >= tempoAffichage) {
+
+    Serial.println(currentMillis);
+    Serial.println(previousMillisAffichage);
+    Serial.println(etatLCD);
+
+    previousMillisAffichage = currentMillis;
+
+    // On eteint le lcd
+    lcd.noDisplay();
+    digitalWrite(pinBacklightLCD, LOW);
+    etatLCD=false;
+  }
+
 
   delay(100);
 
@@ -171,15 +190,23 @@ byte calculMode() {
 
   // Gestion du bouton
   if(etatBoutonMode!=dernierEtatBoutonMode && etatBoutonMode==LOW) {
+
     buzz(100);
     previousMillisLuminosite = 0; // Pour le mode luminosite : Reinitialisation a chaque appui sur le bouton mode
-    mode++;
-    if (mode > 3)
-      mode=1;
+    previousMillisAffichage = currentMillis; // A chaque appui sur le bouton, on recommence a compter
 
-    // Rallumage du lcd
-    lcd.display();
-    digitalWrite(pinBacklightLCD, HIGH);
+    // Si le LCD est eteint, on l'allume, sinon on change de mode
+    if (!etatLCD) {
+      // Rallumage du lcd
+      lcd.display();
+      digitalWrite(pinBacklightLCD, HIGH);
+      etatLCD=true;
+    }
+    else {
+      mode++;
+      if (mode > 3)
+        mode=1;
+    }
   }
 
   // Mise en memoire du dernier etat du bouton
@@ -197,11 +224,20 @@ void modeBouton() {
 
   // Action sur la porte
   if(etatBouton!=dernierEtatBouton && etatBouton==LOW) {
-    // Rallumage du lcd
-    lcd.display();
-    digitalWrite(pinBacklightLCD, HIGH);
 
-    ouverturePorte(!etatPorte);
+    buzz(100);
+    previousMillisAffichage = currentMillis; // A chaque appui sur le bouton, on recommence a compter
+
+    // Si le lcd est eteint, on l'allume, sinon on actionne la porte
+    if (!etatLCD) {
+      // Rallumage du lcd
+      lcd.display();
+      digitalWrite(pinBacklightLCD, HIGH);
+      etatLCD=true;
+    }
+    else {
+      ouverturePorte(!etatPorte);
+    }
   }
 
   // Mise en memoire du dernier etat du bouton
