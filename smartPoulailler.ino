@@ -8,7 +8,7 @@
 #include <Stepper.h>        // Moteur pas a pas
 
 // Declaration des constantes
-const byte pinRelai=8;
+const byte pinStepper1=50, pinStepper2=51, pinStepper3=52, pinStepper4=53;
 const byte pinLedRouge=2, pinLedVerte=3;
 const byte pinBuzzer=22;
 const byte pinBoutonPorte=12, pinBoutonMode=11;
@@ -44,7 +44,7 @@ int heureOuverture[2];         // Tableau de 2 cases : [heure,minute]
 int heureFermeture[2];         // Tableau de 2 cases : [heure,minute]
 
 // Declaration du stepper
-Stepper myStepper(stepsPerRevolution, 53, 51, 52, 50);
+Stepper myStepper(stepsPerRevolution, pinStepper4, pinStepper2, pinStepper3, pinStepper1);
 
 // Declaration du LCD (numero de pin)
 LiquidCrystal lcd(38, 39, 40, 41, 42, 43);
@@ -74,7 +74,6 @@ void setup() {
   previousMillisSemaine = 0;
 
   // Initialisation du mode des PIN
-  pinMode(pinRelai,OUTPUT);
   pinMode(pinLedRouge,OUTPUT);
   pinMode(pinLedVerte,OUTPUT);
   pinMode(pinBuzzer,OUTPUT);
@@ -83,7 +82,12 @@ void setup() {
 
   // Initialisation de l'etat des PIN
   digitalWrite(pinBuzzer,HIGH);
-  digitalWrite(pinRelai,LOW);
+
+  // Initialisation du Stepper
+  digitalWrite(pinStepper1,LOW);
+  digitalWrite(pinStepper2,LOW);
+  digitalWrite(pinStepper3,LOW);
+  digitalWrite(pinStepper4,LOW);
 
   // Initialisation du LCD
   lcd.begin(16, 2);
@@ -276,11 +280,9 @@ void calculSunriseSunset () {
 // Return : état de la porte
 bool ouverturePorte(bool ouvrir) {
   if(!etatPorte && ouvrir) {
-    digitalWrite(pinRelai,HIGH);
     digitalWrite(pinLedRouge,LOW);
     digitalWrite(pinLedVerte,LOW);
     buzz(50);
-    delay(1000);
 
     myStepper.setSpeed(10); // En tr/min
     myStepper.step(1024);
@@ -289,18 +291,18 @@ bool ouverturePorte(bool ouvrir) {
     digitalWrite(pinLedVerte,LOW);
     buzz(100);
 
-    delay(1000);
-    digitalWrite(pinRelai,LOW);
+    digitalWrite(pinStepper1,LOW);
+    digitalWrite(pinStepper2,LOW);
+    digitalWrite(pinStepper3,LOW);
+    digitalWrite(pinStepper4,LOW);
 
     etatPorte=true;
     return etatPorte;
   }
   else if (etatPorte && !ouvrir) {
-    digitalWrite(pinRelai,HIGH);
     digitalWrite(pinLedRouge,LOW);
     digitalWrite(pinLedVerte,LOW);
     buzz(50);
-    delay(1000);
 
     myStepper.setSpeed(10); // En tr/min
     myStepper.step(-1024);
@@ -308,9 +310,11 @@ bool ouverturePorte(bool ouvrir) {
     digitalWrite(pinLedRouge,LOW);
     digitalWrite(pinLedVerte,HIGH);
     buzz(100);
-    delay(1000);
 
-    digitalWrite(pinRelai,LOW);
+    digitalWrite(pinStepper1,LOW);
+    digitalWrite(pinStepper2,LOW);
+    digitalWrite(pinStepper3,LOW);
+    digitalWrite(pinStepper4,LOW);
 
     etatPorte=false;
     return etatPorte;
@@ -322,11 +326,19 @@ bool ouverturePorte(bool ouvrir) {
 // Fonction : Affichage sur le LCD
 void AffichageLCD() {
 
+
+
   // Affichage de l'heure, la temperature et de l'humidite sur la premiere ligne
   lcd.setCursor(0, 0);
   lcd.print((int)now.hour(), DEC);
   lcd.print(":");
-  lcd.print((int)now.minute());
+  if (now.minute() < 10) {
+    lcd.print("0");
+    lcd.print((int)now.minute());
+  }
+  else {
+    lcd.print((int)now.minute());
+  }
   lcd.print("  ");
   lcd.print((int)temperature);
   lcd.print("C");
