@@ -26,8 +26,8 @@ const long tempoSemaine = 604800000;  // Nombre de milliseconde dans une semaine
 const long tempoAffichage = 60000;  // Temporisation de une minute pour eteindre l'affichage
 const float LONGITUDE = 7.139;        // Longitude de Burnhaupt
 const float LATITUDE = 47.729;        // Lattitude de Burnhaupt
-const int offsetApresSunset = 180;    // Decalage apres le sunset en minutes
-const int offsetAvantSunrise = 0;    // Decalage avant le sunrise en minutes
+const int offsetSunset = 30;    // Decalage apres le sunset en minutes (peut etre negatif)
+const int offsetSunrise = 30;    // Decalage après le sunrise en minutes (peut etre negatif)
 const float stepsPerRevolution = 2048;  // Nombre de pas par tour
 
 // Declaration des variables globales
@@ -66,7 +66,7 @@ void setup() {
   // rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
 
   // Initialisation des variables
-  mode=1;
+  mode=3;
   etatLCD=true;
   etatBouton=LOW;
   dernierEtatBouton=HIGH;
@@ -304,22 +304,40 @@ void calculSunriseSunset () {
   // Calcul du Sunrise et affectation des variables heureOuverture
   tardis.SunRise(today);
   heureOuverture[0] = today[tl_hour];
-  heureOuverture[1] = today[tl_minute] - offsetAvantSunrise;
+  heureOuverture[1] = today[tl_minute] + offsetSunrise;
 
-  while (heureOuverture[1] < 0) {
-    heureOuverture[0] = heureOuverture[0] - 1;
-    heureOuverture[1] = heureOuverture[1] + 60;
+  if (heureOuverture[1] < 0) {
+    while (heureOuverture[1] < 0) {
+      heureOuverture[0] = heureOuverture[0] - 1;
+      heureOuverture[1] = heureOuverture[1] + 60;
+    }
+  }
+
+  if (heureOuverture[1] > 59) {
+    while (heureOuverture[1] > 59) {
+      heureOuverture[0] = heureOuverture[0] + 1;
+      heureOuverture[1] = heureOuverture[1] - 60;
+    }
   }
 
   // Calcul du Sunset et affectation des variables heureFermeture
   tardis.SunSet(today);
 
   heureFermeture[0] = today[tl_hour];
-  heureFermeture[1] = today[tl_minute] + offsetApresSunset;
+  heureFermeture[1] = today[tl_minute] + offsetSunset;
 
-  while (heureFermeture[1] > 59) {
-    heureFermeture[0] = heureFermeture[0] + 1;
-    heureFermeture[1] = heureFermeture[1] - 60;
+  if (heureFermeture[1] < 0) {
+    while (heureFermeture[1] < 0) {
+      heureFermeture[0] = heureFermeture[0] - 1;
+      heureFermeture[1] = heureFermeture[1] + 60;
+    }
+  }
+
+  if (heureFermeture[1] > 59) {
+    while (heureFermeture[1] > 59) {
+      heureFermeture[0] = heureFermeture[0] + 1;
+      heureFermeture[1] = heureFermeture[1] - 60;
+    }
   }
 
 }
@@ -411,11 +429,23 @@ void AffichageLCD() {
     case 3: // Mode 3 : Horaire
       lcd.print(heureOuverture[0]);
       lcd.print(":");
-      lcd.print(heureOuverture[1]);
+      if (heureOuverture[1] < 10) {
+        lcd.print("0");
+        lcd.print(heureOuverture[1]);
+      }
+      else {
+        lcd.print(heureOuverture[1]);
+      }
       lcd.print(" - ");
       lcd.print(heureFermeture[0]);
       lcd.print(":");
-      lcd.print(heureFermeture[1]);
+      if (heureFermeture[1] < 10) {
+        lcd.print("0");
+        lcd.print(heureFermeture[1]);
+      }
+      else {
+        lcd.print(heureFermeture[1]);
+      }
       lcd.print("           ");
     break;
     default:
