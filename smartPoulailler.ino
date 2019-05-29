@@ -8,6 +8,7 @@
 #include <Stepper.h>        // Moteur pas a pas
 
 // Declaration des constantes
+const byte pinBoutonFinDeCourse=10;
 const byte pinBacklightLCD=A1;
 const byte pinStepper1=50, pinStepper2=51, pinStepper3=52, pinStepper4=53;
 const byte pinLedRouge=2, pinLedVerte=3;
@@ -84,6 +85,7 @@ void setup() {
   pinMode(pinBuzzer,OUTPUT);
   pinMode(pinBoutonPorte,INPUT_PULLUP);
   pinMode(pinBoutonMode,INPUT_PULLUP);
+  pinMode(pinBoutonFinDeCourse,INPUT_PULLUP);
   pinMode(pinBacklightLCD, OUTPUT);
 
   // Initialisation de l'etat des PIN
@@ -353,7 +355,12 @@ bool ouverturePorte(bool ouvrir) {
     buzz(50);
 
     myStepper.setSpeed(10); // En tr/min
-    myStepper.step(1024);
+
+    // Tant que le bouton de fin de course n'est pas acctionnee
+    while (digitalRead(pinBoutonFinDeCourse) != 0)
+    {
+      myStepper.step(20);
+    }
 
     digitalWrite(pinLedRouge,HIGH);
     digitalWrite(pinLedVerte,LOW);
