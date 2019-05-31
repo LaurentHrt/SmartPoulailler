@@ -26,9 +26,10 @@ const long tempoSemaine = 604800000;  // Nombre de milliseconde dans une semaine
 const long tempoAffichage = 60000;  // Temporisation de une minute pour eteindre l'affichage
 const float LONGITUDE = 7.139;        // Longitude de Burnhaupt
 const float LATITUDE = 47.729;        // Lattitude de Burnhaupt
-const int offsetSunset = 30;    // Decalage apres le sunset en minutes (peut etre negatif)
-const int offsetSunrise = 30;    // Decalage après le sunrise en minutes (peut etre negatif)
-const float stepsPerRevolution = 2048;  // Nombre de pas par tour
+const int offsetSunset = 60;    // Decalage apres le sunset en minutes (peut etre negatif)
+const int offsetSunrise = -30;    // Decalage après le sunrise en minutes (peut etre negatif)
+const float stepsPerRevolution = 2048;  // Nombre de pas par tour (Caracteristique du moteur)
+const int stepperSpeed = 15; // en tr/min
 
 // Declaration des variables globales
 byte mode; // 1: Mode bouton, 2: Mode Luminosité, 3: Mode horaire
@@ -87,6 +88,8 @@ void setup() {
 
   // Initialisation de l'etat des PIN
   digitalWrite(pinBuzzer,HIGH);
+  digitalWrite(pinLedRouge,LOW);
+  digitalWrite(pinLedVerte,HIGH);
 
   // Initialisation du Stepper
   digitalWrite(pinStepper1,LOW);
@@ -100,6 +103,9 @@ void setup() {
   // Initialisation du LCD
   lcd.begin(16, 2);
 
+  // Initialsation de la vitesse du stepper
+  myStepper.setSpeed(stepperSpeed);
+
   // Aquisition de l'heure actuelle
   now = rtc.now();
 
@@ -110,7 +116,6 @@ void setup() {
 
   // Execution de fonctions pour initialisation
   calculSunriseSunset();
-  ouverturePorte(true);
 
   // Buzz du demarrage
   buzz(100);
@@ -160,10 +165,6 @@ void loop() {
   // Execution toutes les minutes pour éteindre le LCD
   if (currentMillis - previousMillisAffichage >= tempoAffichage) {
 
-    Serial.println(currentMillis);
-    Serial.println(previousMillisAffichage);
-    Serial.println(etatLCD);
-
     previousMillisAffichage = currentMillis;
 
     // On eteint le lcd
@@ -171,7 +172,6 @@ void loop() {
     digitalWrite(pinBacklightLCD, LOW);
     etatLCD=false;
   }
-
 
   delay(100);
 
@@ -343,16 +343,17 @@ void calculSunriseSunset () {
 //              2: action de fermer la porte
 // Return : état de la porte
 bool ouverturePorte(bool ouvrir) {
+
   if(!etatPorte && ouvrir) {
+
     digitalWrite(pinLedRouge,LOW);
     digitalWrite(pinLedVerte,LOW);
     buzz(50);
 
-    myStepper.setSpeed(10); // En tr/min
-
-    // Tant que le bouton de fin de course n'est pas acctionnee
-    while (digitalRead(pinBoutonFinDeCourseHaut) != 0)
-      myStepper.step(20);
+    // Tant que le bouton de fin de course n'est pas actionnee, on fait tourner le moteur
+    while (digitalRead(pinBoutonFinDeCourseHaut) != 0) {
+      myStepper.step(40);
+    }
 
     // Allumage des Leds
     digitalWrite(pinLedRouge,HIGH);
@@ -366,18 +367,18 @@ bool ouverturePorte(bool ouvrir) {
 
     buzz(100);
     etatPorte=true;
+
     return etatPorte;
   }
+
   else if (etatPorte && !ouvrir) {
     digitalWrite(pinLedRouge,LOW);
     digitalWrite(pinLedVerte,LOW);
     buzz(50);
 
-    myStepper.setSpeed(10); // En tr/min
-
     // Tant que le bouton de fin de course n'est pas acctionnee
     while (digitalRead(pinBoutonFinDeCourseBas) != 0)
-      myStepper.step(-20);
+      myStepper.step(-40);
 
     // Allumage des Leds
     digitalWrite(pinLedRouge,LOW);
@@ -393,6 +394,7 @@ bool ouverturePorte(bool ouvrir) {
     etatPorte=false;
     return etatPorte;
   }
+
   else
     return 0;
 }
@@ -401,8 +403,7 @@ bool ouverturePorte(bool ouvrir) {
 void AffichageLCD() {
 
 
-
-  // Affichage de l'heure, la temperature et de l'humidite sur la premiere ligne
+  // Affichage de l'heure  sur la premiere ligne
   lcd.setCursor(0, 0);
   lcd.print((int)now.hour(), DEC);
   lcd.print(":");
