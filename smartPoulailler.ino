@@ -2,21 +2,19 @@
 #include <LiquidCrystal.h>  // LCD
 #include <Wire.h>           // RTC
 #include <RTClib.h>         // RTC
-#include <SimpleDHT.h>      // Temp + Humidity
 #include <TimeLord.h>       // Sunrise-sunset
 #include <Time.h>
 #include <Stepper.h>        // Moteur pas a pas
 
 // Declaration des constantes
 const byte pinBoutonFinDeCourseHaut=7;
-const byte pinBoutonFinDeCourseBas=6;
+const byte pinBoutonFinDeCourseBas=7;     // Pour test, a remettre a 6
 const byte pinBacklightLCD=A1;
 const byte pinStepper1=50, pinStepper2=51, pinStepper3=52, pinStepper4=53;
 const byte pinLedRouge=2, pinLedVerte=3;
 const byte pinBuzzer=22;
 const byte pinBoutonPorte=12, pinBoutonMode=11;
 const byte pinPhotoCell=0;
-const byte pinDHT=9;
 const int seuilLuminosite=500;                                          // TODO: A definir
 const long tempoLuminosite = 5000;                                      // TODO: A definir
 const byte heureMatinMin = 5;
@@ -41,9 +39,6 @@ int etatPhotoCell;
 DateTime now;
 unsigned long currentMillis;
 unsigned long previousMillisLuminosite, previousMillisMinute, previousMillisSemaine, previousMillisAffichage;
-SimpleDHT11 dht11(pinDHT);
-byte temperature;
-byte humidity;
 TimeLord tardis;
 int heureOuverture[2];         // Tableau de 2 cases : [heure,minute]
 int heureFermeture[2];         // Tableau de 2 cases : [heure,minute]
@@ -115,7 +110,6 @@ void setup() {
 
   // Execution de fonctions pour initialisation
   calculSunriseSunset();
-  dht11.read(&temperature, &humidity, NULL);
   ouverturePorte(true);
 
   // Buzz du demarrage
@@ -154,8 +148,6 @@ void loop() {
   // Execution toutes les minutes
   if (currentMillis - previousMillisMinute >= tempoMinute) {
     previousMillisMinute = currentMillis;
-
-    dht11.read(&temperature, &humidity, NULL);
   }
 
   // Execution toutes les semaines
@@ -421,12 +413,7 @@ void AffichageLCD() {
   else {
     lcd.print((int)now.minute());
   }
-  lcd.print("  ");
-  lcd.print((int)temperature);
-  lcd.print("C");
-  lcd.print("  ");
-  lcd.print((int)humidity);
-  lcd.print("%   ");
+  lcd.print(" SmartPoule");
 
   // Affichage de la deuxieme ligne selon le mode
   lcd.setCursor(0, 1);
