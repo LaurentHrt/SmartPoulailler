@@ -8,7 +8,8 @@
 #include <Stepper.h>        // Moteur pas a pas
 
 // Declaration des constantes
-const byte pinBoutonFinDeCourse=10;
+const byte pinBoutonFinDeCourseHaut=7;
+const byte pinBoutonFinDeCourseBas=6;
 const byte pinBacklightLCD=A1;
 const byte pinStepper1=50, pinStepper2=51, pinStepper3=52, pinStepper4=53;
 const byte pinLedRouge=2, pinLedVerte=3;
@@ -67,7 +68,7 @@ void setup() {
   // rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
 
   // Initialisation des variables
-  mode=3;
+  mode=1;
   etatLCD=true;
   etatBouton=LOW;
   dernierEtatBouton=HIGH;
@@ -85,7 +86,8 @@ void setup() {
   pinMode(pinBuzzer,OUTPUT);
   pinMode(pinBoutonPorte,INPUT_PULLUP);
   pinMode(pinBoutonMode,INPUT_PULLUP);
-  pinMode(pinBoutonFinDeCourse,INPUT_PULLUP);
+  pinMode(pinBoutonFinDeCourseHaut,INPUT_PULLUP);
+  pinMode(pinBoutonFinDeCourseBas,INPUT_PULLUP);
   pinMode(pinBacklightLCD, OUTPUT);
 
   // Initialisation de l'etat des PIN
@@ -357,20 +359,20 @@ bool ouverturePorte(bool ouvrir) {
     myStepper.setSpeed(10); // En tr/min
 
     // Tant que le bouton de fin de course n'est pas acctionnee
-    while (digitalRead(pinBoutonFinDeCourse) != 0)
-    {
+    while (digitalRead(pinBoutonFinDeCourseHaut) != 0)
       myStepper.step(20);
-    }
 
+    // Allumage des Leds
     digitalWrite(pinLedRouge,HIGH);
     digitalWrite(pinLedVerte,LOW);
-    buzz(100);
 
+    // Extinction du stepper motor
     digitalWrite(pinStepper1,LOW);
     digitalWrite(pinStepper2,LOW);
     digitalWrite(pinStepper3,LOW);
     digitalWrite(pinStepper4,LOW);
 
+    buzz(100);
     etatPorte=true;
     return etatPorte;
   }
@@ -380,17 +382,22 @@ bool ouverturePorte(bool ouvrir) {
     buzz(50);
 
     myStepper.setSpeed(10); // En tr/min
-    myStepper.step(-1024);
 
+    // Tant que le bouton de fin de course n'est pas acctionnee
+    while (digitalRead(pinBoutonFinDeCourseBas) != 0)
+      myStepper.step(-20);
+
+    // Allumage des Leds
     digitalWrite(pinLedRouge,LOW);
     digitalWrite(pinLedVerte,HIGH);
-    buzz(100);
 
+    // Extinction du stepper motor
     digitalWrite(pinStepper1,LOW);
     digitalWrite(pinStepper2,LOW);
     digitalWrite(pinStepper3,LOW);
     digitalWrite(pinStepper4,LOW);
 
+    buzz(100);
     etatPorte=false;
     return etatPorte;
   }
