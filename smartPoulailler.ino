@@ -28,7 +28,7 @@ const byte heureMatinMin = 5;
 const byte heureMatinMax = 10;
 const byte heureSoirMin = 18;
 const byte heureSoirMax = 23;
-const long tempoAffichage = 60000;  // Temporisation de une minute pour eteindre l'affichage
+const long tempoSleep = 60000;  // Temporisation de une minute pour eteindre l'affichage
 const float LONGITUDE = 7.139;        // Longitude de Burnhaupt
 const float LATITUDE = 47.729;        // Lattitude de Burnhaupt
 const int offsetSunset = 120;    // Decalage apres le sunset en minutes (peut etre negatif) (Il y a un decalage de 2 heures apparemment)
@@ -44,7 +44,7 @@ bool etatPorte;
 int etatPhotoCell;
 time_t t;
 unsigned long currentMillis;
-unsigned long previousMillisLuminosite, previousMillisAffichage;
+unsigned long previousMillisLuminosite, previousMillisSleep;
 TimeLord tardis;
 tmElements_t heureOuverture;
 tmElements_t heureFermeture;
@@ -67,14 +67,14 @@ void setup() {
   rtc.begin();
 
   // Décommenter le bloc ci-dessous pour regler l'heure
-  tmElements_t tm;
-  tm.Second = 00;
-  tm.Minute = 17;
-  tm.Hour = 13;               // set the RTC to an arbitrary time
-  tm.Day = 2;
-  tm.Month = 11;
-  tm.Year = 2019 - 1970;      // tmElements_t.Year is the offset from 1970
-  RTC.write(tm);              // set the RTC from the tm structure
+  // tmElements_t tm;
+  // tm.Second = 00;
+  // tm.Minute = 51;
+  // tm.Hour = 17;               // set the RTC to an arbitrary time
+  // tm.Day = 2;
+  // tm.Month = 6;
+  // tm.Year = 2019 - 1970;      // tmElements_t.Year is the offset from 1970
+  // RTC.write(tm);              // set the RTC from the tm structure
 
   // Initialisation des variables
   mode=1;
@@ -85,7 +85,7 @@ void setup() {
   dernierEtatBoutonMode=HIGH;
   etatPorte=LOW;
   previousMillisLuminosite = 0;
-  previousMillisAffichage = 0;
+  previousMillisSleep = 0;
 
   // Initialisation du mode des PIN
   pinMode(LED_BUILTIN,OUTPUT); // Utilisation de la led 13 pour indiquer le mode veille
@@ -173,14 +173,12 @@ void loop() {
   }
 
   // Execution toutes les minutes pour passer en sleep
-  if (currentMillis - previousMillisAffichage >= tempoAffichage) {
-    previousMillisAffichage = currentMillis;
+  if (currentMillis - previousMillisSleep >= tempoSleep) {
+    previousMillisSleep = currentMillis;
 
     // On se met en veille
     goingToSleep();
   }
-
-  delay(100);
 
 }
 
@@ -196,18 +194,14 @@ byte calculMode() {
 
     buzz(100);
     previousMillisLuminosite = 0; // Pour le mode luminosite : Reinitialisation a chaque appui sur le bouton mode
-    previousMillisAffichage = currentMillis; // A chaque appui sur le bouton, on recommence a compter
+    previousMillisSleep = currentMillis; // A chaque appui sur le bouton, on recommence a compter
 
     // Si le LCD est eteint, on l'allume, sinon on change de mode
-    if (!etatLCD) {
-      // Rallumage du lcd
-      allumageLCD();
-    }
-    else {
+
       mode++;
       if (mode > 3)
         mode=1;
-    }
+
   }
 
   // Mise en memoire du dernier etat du bouton
@@ -227,7 +221,7 @@ void modeBouton() {
   if(etatBouton!=dernierEtatBouton && etatBouton==LOW) {
 
     buzz(100);
-    previousMillisAffichage = currentMillis; // A chaque appui sur le bouton, on recommence a compter
+    previousMillisSleep = currentMillis; // A chaque appui sur le bouton, on recommence a compter
 
     // Si le lcd est eteint, on l'allume, sinon on actionne la porte
     if (!etatLCD) {
@@ -298,9 +292,12 @@ void modeHorraire() {
 // Fonction de mise en veille
 void goingToSleep() {
   sleep_enable();//Enabling sleep mode
+  set_sleep_mode(SLEEP_MODE_PWR_DOWN); //Setting the sleep mode, in our case full sleep
+
   attachInterrupt(digitalPinToInterrupt(pinInterruptRTC), wakeUp, LOW); //attaching a interrupt to pin RTC
   attachInterrupt(digitalPinToInterrupt(pinBoutonMode), wakeUp, LOW); //attaching a interrupt to pin boutonMode
-  set_sleep_mode(SLEEP_MODE_PWR_DOWN);//Setting the sleep mode, in our case full sleep
+
+  delay(1000);
 
   extinctionLCD();
 
@@ -311,7 +308,10 @@ void goingToSleep() {
 
   delay(1000);
 
-  sleep_cpu();//activating sleep mode
+  sleep_cpu(); //activating sleep mode
+
+  // Delai pour pas que l'appui soit pris en compte pour changer de mode
+  delay(2000);
 
   // Set new alarms
   RTC.setAlarm(ALM1_MATCH_HOURS, heureOuverture.Minute, heureOuverture.Hour, 0); // Set de l'alarme 1 sur l'heure de l'ouverture - offset
@@ -330,6 +330,8 @@ void wakeUp() {
   allumageLCD();
 
   calculSunriseSunset();
+
+  previousMillisSleep = currentMillis;
 
   sleep_disable();//Disable sleep mode
   detachInterrupt(digitalPinToInterrupt(pinInterruptRTC)); //Removes the interrupt from pin
