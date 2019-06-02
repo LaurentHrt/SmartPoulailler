@@ -1,10 +1,13 @@
 // Declaration des includes
 #include <LiquidCrystal.h>  // LCD
-#include <Wire.h>           // RTC
-#include <RTClib.h>         // RTC
+// #include <Wire.h>           // RTC
+// #include <RTClib.h>         // RTC
 #include <TimeLord.h>       // Sunrise-sunset
-#include <Time.h>
+// #include <Time.h>
+#include <avr/sleep.h>      // Mode sleep
+#include <DS3232RTC.h>
 #include <Stepper.h>        // Moteur pas a pas
+
 
 // Define pin
 #define pinBoutonFinDeCourseHaut 7
@@ -18,8 +21,9 @@
 #define pinLedVerte 3
 #define pinBuzzer 22
 #define pinBoutonPorte 12
-#define pinBoutonMode 11
+#define pinBoutonMode 18
 #define pinPhotoCell 0
+#define pinInterruptRTC 19  // Pin reliée au SQW du module RTC (Utilisée pour reveiller la carte)
 
 // Declaration des constantes
 const int seuilLuminosite=500;                                          // TODO: A definir
@@ -44,7 +48,7 @@ bool etatLCD; // False = LCD eteint; true = LCD allumé
 bool etatBouton, dernierEtatBouton, etatBoutonMode, dernierEtatBoutonMode;
 bool etatPorte;
 int etatPhotoCell;
-DateTime now;
+time_t t;
 unsigned long currentMillis;
 unsigned long previousMillisLuminosite, previousMillisMinute, previousMillisSemaine, previousMillisAffichage;
 TimeLord tardis;
@@ -58,7 +62,8 @@ Stepper myStepper(stepsPerRevolution, pinStepper4, pinStepper2, pinStepper3, pin
 LiquidCrystal lcd(38, 39, 40, 41, 42, 43);
 
 // Declaration de l'horloge
-RTC_DS3231 rtc;
+// RTC_DS3231 rtc;
+DS3232RTC rtc;
 
 void setup() {
 
@@ -69,6 +74,16 @@ void setup() {
   rtc.begin();
   // Decommenter la ligne suivante pour initialiser l'horloge a la date de la compilation
   // rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+
+  // Décommenter le bloc ci-dessous pour regler l'heure
+  tmElements_t tm;
+  tm.Second = 00;
+  tm.Minute = 00;
+  tm.Hour = 12;               // set the RTC to an arbitrary time
+  tm.Day = 2;
+  tm.Month = 6;
+  tm.Year = 2019 - 1970;      // tmElements_t.Year is the offset from 1970
+  RTC.write(tm);              // set the RTC from the tm structure
 
   // Initialisation des variables
   mode=1;
@@ -84,6 +99,8 @@ void setup() {
   previousMillisAffichage = 0;
 
   // Initialisation du mode des PIN
+  pinMode(LED_BUILTIN,OUTPUT); // Utilisation de la led 13 pour indiquer le mode veille
+  pinMode(pinInterruptRTC,INPUT_PULLUP);
   pinMode(pinLedRouge,OUTPUT);
   pinMode(pinLedVerte,OUTPUT);
   pinMode(pinBuzzer,OUTPUT);
@@ -94,6 +111,7 @@ void setup() {
   pinMode(pinBacklightLCD, OUTPUT);
 
   // Initialisation de l'etat des PIN
+  digitalWrite(LED_BUILTIN,LOW);
   digitalWrite(pinBuzzer,HIGH);
   digitalWrite(pinLedRouge,LOW);
   digitalWrite(pinLedVerte,HIGH);
@@ -114,7 +132,23 @@ void setup() {
   myStepper.setSpeed(stepperSpeed);
 
   // Aquisition de l'heure actuelle
-  now = rtc.now();
+  // now = rtc.now();
+  t = RTC.get();
+
+  // Initialisation de l'alarme, reset des flags
+  RTC.setAlarm(ALM1_MATCH_DATE, 0, 0, 0, 1);
+  RTC.setAlarm(ALM2_MATCH_DATE, 0, 0, 0, 1);
+  RTC.alarm(ALARM_1);
+  RTC.alarm(ALARM_2);
+  RTC.alarmInterrupt(ALARM_1, false);
+  RTC.alarmInterrupt(ALARM_2, false);
+  RTC.squareWave(SQWAVE_NONE);
+
+  // RTC.setAlarm(alarmType, minutes, hours, dayOrDate);
+  RTC.setAlarm(ALM1_MATCH_HOURS, 0, 20, 0); // Set de l'alarme 1
+  RTC.alarm(ALARM_1); // clear the alarm flag
+  RTC.squareWave(SQWAVE_NONE); // configure the INT/SQW pin for "interrupt" operation
+  RTC.alarmInterrupt(ALARM_1, true); // enable interrupt output for Alarm 1
 
   // Initialisation pour le calcul sunrise-sunset
   tardis.TimeZone(1 * 60); // tell TimeLord what timezone your RTC is synchronized to. You can ignore DST
@@ -132,7 +166,7 @@ void setup() {
 void loop() {
 
   // Maj de l'heure actuelle
-  now = rtc.now();
+  t = RTC.get();
 
   // Maj des millis (milliseconde depuis le demarrage)
   currentMillis = millis();
@@ -256,7 +290,7 @@ void modeLuminosite() {
 
   // Action sur la porte
   // Si la luminosite est superieure a ... dans la plage horraire horraire ... pendant x, on ouvre la porte
-  if(now.hour()>=heureMatinMin && now.hour()<heureMatinMax) {
+  if(hour(t)>=heureMatinMin && hour(t)<heureMatinMax) {
     if(etatPhotoCell>seuilLuminosite && previousMillisLuminosite != 0) {
       if (currentMillis - previousMillisLuminosite >= tempoLuminosite) {
         previousMillisLuminosite = currentMillis;
@@ -268,7 +302,7 @@ void modeLuminosite() {
     }
   }
 
-  if(now.hour()>=heureSoirMin && now.hour()<heureSoirMax) {
+  if(hour(t)>=heureSoirMin && hour(t)<heureSoirMax) {
     if(etatPhotoCell<seuilLuminosite && previousMillisLuminosite != 0) {
       if (currentMillis - previousMillisLuminosite >= tempoLuminosite) {
         previousMillisLuminosite = currentMillis;
@@ -281,9 +315,9 @@ void modeLuminosite() {
   }
 
   // Securite : ouverture/fermeture de la porte aux horaires max du matin/soir
-  if(now.hour()==heureMatinMax)
+  if(hour(t)==heureMatinMax)
     ouverturePorte(true);
-  if(now.hour()==heureSoirMax)
+  if(hour(t)==heureSoirMax)
     ouverturePorte(false);
 
 }
@@ -292,17 +326,36 @@ void modeLuminosite() {
 void modeHorraire() {
 
   // Action sur la porte
-  if(now.hour()==heureOuverture[0] && now.minute()==heureOuverture[1])
+  if(hour(t)==heureOuverture[0] && minute(t)==heureOuverture[1])
     ouverturePorte(true);
-  else if (now.hour()==heureFermeture[0] && now.minute()==heureFermeture[1])
+  else if (hour(t)==heureFermeture[0] && minute(t)==heureFermeture[1])
     ouverturePorte(false);
 
+}
+
+// Fonction de mise en veille
+void goingToSleep() {
+  sleep_enable();//Enabling sleep mode
+  attachInterrupt(pinToInterrupt(pinInterruptRTC), wakeUp, LOW);//attaching a interrupt to pin d2
+  set_sleep_mode(SLEEP_MODE_PWR_DOWN);//Setting the sleep mode, in our case full sleep
+  digitalWrite(LED_BUILTIN,HIGH);
+  delay(1000);
+  sleep_cpu();//activating sleep mode
+  digitalWrite(LED_BUILTIN,LOW);
+  RTC.setAlarm(ALM1_MATCH_HOURS, 0, 6, 0); //Set New Alarm
+  RTC.alarm(ALARM_1); // clear the alarm flag
+}
+
+// Fonction éxécutée au réveil
+void wakeUp() {
+  sleep_disable();//Disable sleep mode
+  detachInterrupt(pinToInterrupt(pinInterruptRTC)); //Removes the interrupt from pin
 }
 
 // Fonction qui calcul les heures de sunrise et de sunset, et initialisation des variable heureOuverture et heureFermeture;
 void calculSunriseSunset () {
 
-  byte today[] = {0, 0, 12, now.day(), now.month(), now.year()}; // store today's date (at noon) in an array for TimeLord to use
+  byte today[] = {0, 0, 12, t.day(), t.month(), t.year()}; // store today's date (at noon) in an array for TimeLord to use
 
   // Calcul du Sunrise et affectation des variables heureOuverture
   tardis.SunRise(today);
@@ -349,7 +402,7 @@ void calculSunriseSunset () {
 // @Param : Bool 1: action d'ouvrir la porteOuvert
 //              2: action de fermer la porte
 // Return : état de la porte
-bool ouverturePorte(bool ouvrir) {
+void ouverturePorte(bool ouvrir) {
 
   if(!etatPorte && ouvrir) {
 
@@ -375,7 +428,6 @@ bool ouverturePorte(bool ouvrir) {
     buzz(100);
     etatPorte=true;
 
-    return etatPorte;
   }
 
   else if (etatPorte && !ouvrir) {
@@ -399,11 +451,10 @@ bool ouverturePorte(bool ouvrir) {
 
     buzz(100);
     etatPorte=false;
-    return etatPorte;
   }
 
-  else
-    return 0;
+  goingToSleep();
+
 }
 
 // Fonction : Affichage sur le LCD
@@ -412,14 +463,14 @@ void AffichageLCD() {
 
   // Affichage de l'heure  sur la premiere ligne
   lcd.setCursor(0, 0);
-  lcd.print((int)now.hour(), DEC);
+  lcd.print((int)hour(t), DEC);
   lcd.print(":");
-  if (now.minute() < 10) {
+  if (minute(t) < 10) {
     lcd.print("0");
-    lcd.print((int)now.minute());
+    lcd.print((int)minute(t));
   }
   else {
-    lcd.print((int)now.minute());
+    lcd.print((int)minute(t));
   }
   lcd.print(" SmartPoule");
 
