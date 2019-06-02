@@ -6,15 +6,22 @@
 #include <Time.h>
 #include <Stepper.h>        // Moteur pas a pas
 
+// Define pin
+#define pinBoutonFinDeCourseHaut 7
+#define pinBoutonFinDeCourseBas 7 // Pour test, a remettre a 6
+#define pinBacklightLCD A1
+#define pinStepper1 50
+#define pinStepper2 51
+#define pinStepper3 52
+#define pinStepper4 53
+#define pinLedRouge 2
+#define pinLedVerte 3
+#define pinBuzzer 22
+#define pinBoutonPorte 12
+#define pinBoutonMode 11
+#define pinPhotoCell 0
+
 // Declaration des constantes
-const byte pinBoutonFinDeCourseHaut=7;
-const byte pinBoutonFinDeCourseBas=7;     // Pour test, a remettre a 6
-const byte pinBacklightLCD=A1;
-const byte pinStepper1=50, pinStepper2=51, pinStepper3=52, pinStepper4=53;
-const byte pinLedRouge=2, pinLedVerte=3;
-const byte pinBuzzer=22;
-const byte pinBoutonPorte=12, pinBoutonMode=11;
-const byte pinPhotoCell=0;
 const int seuilLuminosite=500;                                          // TODO: A definir
 const long tempoLuminosite = 5000;                                      // TODO: A definir
 const byte heureMatinMin = 5;
