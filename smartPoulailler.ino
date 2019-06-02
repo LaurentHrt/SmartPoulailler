@@ -72,18 +72,16 @@ void setup() {
 
   // Demarrage de l'horloge
   rtc.begin();
-  // Decommenter la ligne suivante pour initialiser l'horloge a la date de la compilation
-  // rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
 
   // Décommenter le bloc ci-dessous pour regler l'heure
-  tmElements_t tm;
-  tm.Second = 00;
-  tm.Minute = 00;
-  tm.Hour = 12;               // set the RTC to an arbitrary time
-  tm.Day = 2;
-  tm.Month = 6;
-  tm.Year = 2019 - 1970;      // tmElements_t.Year is the offset from 1970
-  RTC.write(tm);              // set the RTC from the tm structure
+  // tmElements_t tm;
+  // tm.Second = 00;
+  // tm.Minute = 17;
+  // tm.Hour = 13;               // set the RTC to an arbitrary time
+  // tm.Day = 2;
+  // tm.Month = 6;
+  // tm.Year = 2019 - 1970;      // tmElements_t.Year is the offset from 1970
+  // RTC.write(tm);              // set the RTC from the tm structure
 
   // Initialisation des variables
   mode=1;
@@ -145,7 +143,7 @@ void setup() {
   RTC.squareWave(SQWAVE_NONE);
 
   // RTC.setAlarm(alarmType, minutes, hours, dayOrDate);
-  RTC.setAlarm(ALM1_MATCH_HOURS, 0, 20, 0); // Set de l'alarme 1
+  RTC.setAlarm(ALM1_MATCH_HOURS, 26, 13, 0); // Set de l'alarme 1
   RTC.alarm(ALARM_1); // clear the alarm flag
   RTC.squareWave(SQWAVE_NONE); // configure the INT/SQW pin for "interrupt" operation
   RTC.alarmInterrupt(ALARM_1, true); // enable interrupt output for Alarm 1
@@ -209,9 +207,7 @@ void loop() {
     previousMillisAffichage = currentMillis;
 
     // On eteint le lcd
-    lcd.noDisplay();
-    digitalWrite(pinBacklightLCD, LOW);
-    etatLCD=false;
+    extinctionLCD();
   }
 
   delay(100);
@@ -268,9 +264,7 @@ void modeBouton() {
     // Si le lcd est eteint, on l'allume, sinon on actionne la porte
     if (!etatLCD) {
       // Rallumage du lcd
-      lcd.display();
-      digitalWrite(pinBacklightLCD, HIGH);
-      etatLCD=true;
+      allumageLCD();
     }
     else {
       ouverturePorte(!etatPorte);
@@ -336,26 +330,36 @@ void modeHorraire() {
 // Fonction de mise en veille
 void goingToSleep() {
   sleep_enable();//Enabling sleep mode
-  attachInterrupt(pinToInterrupt(pinInterruptRTC), wakeUp, LOW);//attaching a interrupt to pin d2
+  attachInterrupt(digitalPinToInterrupt(pinInterruptRTC), wakeUp, LOW); //attaching a interrupt to pin RTC
+  attachInterrupt(digitalPinToInterrupt(pinBoutonMode), wakeUp, LOW); //attaching a interrupt to pin boutonMode
   set_sleep_mode(SLEEP_MODE_PWR_DOWN);//Setting the sleep mode, in our case full sleep
   digitalWrite(LED_BUILTIN,HIGH);
+
+  extinctionLCD();
+
+  // Extinction des leds
+  digitalWrite(pinLedRouge,HIGH);
+  digitalWrite(pinLedVerte,HIGH);
+
   delay(1000);
+
   sleep_cpu();//activating sleep mode
   digitalWrite(LED_BUILTIN,LOW);
-  RTC.setAlarm(ALM1_MATCH_HOURS, 0, 6, 0); //Set New Alarm
+  RTC.setAlarm(ALM1_MATCH_HOURS, 27, 13, 0); //Set New Alarm
   RTC.alarm(ALARM_1); // clear the alarm flag
 }
 
 // Fonction éxécutée au réveil
 void wakeUp() {
   sleep_disable();//Disable sleep mode
-  detachInterrupt(pinToInterrupt(pinInterruptRTC)); //Removes the interrupt from pin
+  detachInterrupt(digitalPinToInterrupt(pinInterruptRTC)); //Removes the interrupt from pin
+  detachInterrupt(digitalPinToInterrupt(pinBoutonMode)); //Removes the interrupt from pin
 }
 
 // Fonction qui calcul les heures de sunrise et de sunset, et initialisation des variable heureOuverture et heureFermeture;
 void calculSunriseSunset () {
 
-  byte today[] = {0, 0, 12, t.day(), t.month(), t.year()}; // store today's date (at noon) in an array for TimeLord to use
+  byte today[] = {0, 0, 12, day(t), month(t), year(t)}; // store today's date (at noon) in an array for TimeLord to use
 
   // Calcul du Sunrise et affectation des variables heureOuverture
   tardis.SunRise(today);
@@ -455,6 +459,20 @@ void ouverturePorte(bool ouvrir) {
 
   goingToSleep();
 
+}
+
+// Fonction extinction du LCD et du backlight
+void extinctionLCD() {
+  lcd.noDisplay();
+  digitalWrite(pinBacklightLCD, LOW);
+  etatLCD=false;
+}
+
+// Fonction allumage du LCD et du backlight
+void allumageLCD() {
+  lcd.display();
+  digitalWrite(pinBacklightLCD, HIGH);
+  etatLCD=true;
 }
 
 // Fonction : Affichage sur le LCD
