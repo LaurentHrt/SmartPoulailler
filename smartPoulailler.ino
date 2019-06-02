@@ -1,13 +1,9 @@
 // Declaration des includes
 #include <LiquidCrystal.h>  // LCD
-// #include <Wire.h>           // RTC
-// #include <RTClib.h>         // RTC
 #include <TimeLord.h>       // Sunrise-sunset
-// #include <Time.h>
 #include <avr/sleep.h>      // Mode sleep
-#include <DS3232RTC.h>
+#include <DS3232RTC.h>      // RTC
 #include <Stepper.h>        // Moteur pas a pas
-
 
 // Define pin
 #define pinBoutonFinDeCourseHaut 7
@@ -32,13 +28,11 @@ const byte heureMatinMin = 5;
 const byte heureMatinMax = 10;
 const byte heureSoirMin = 18;
 const byte heureSoirMax = 23;
-const long tempoMinute = 60000;  //
-const long tempoSemaine = 604800000;  // Nombre de milliseconde dans une semaine
 const long tempoAffichage = 60000;  // Temporisation de une minute pour eteindre l'affichage
 const float LONGITUDE = 7.139;        // Longitude de Burnhaupt
 const float LATITUDE = 47.729;        // Lattitude de Burnhaupt
-const int offsetSunset = 60;    // Decalage apres le sunset en minutes (peut etre negatif)
-const int offsetSunrise = -30;    // Decalage après le sunrise en minutes (peut etre negatif)
+const int offsetSunset = 120;    // Decalage apres le sunset en minutes (peut etre negatif) (Il y a un decalage de 2 heures apparemment)
+const int offsetSunrise = 0;    // Decalage après le sunrise en minutes (peut etre negatif)
 const float stepsPerRevolution = 2048;  // Nombre de pas par tour (Caracteristique du moteur)
 const int stepperSpeed = 15; // en tr/min
 
@@ -50,10 +44,10 @@ bool etatPorte;
 int etatPhotoCell;
 time_t t;
 unsigned long currentMillis;
-unsigned long previousMillisLuminosite, previousMillisMinute, previousMillisSemaine, previousMillisAffichage;
+unsigned long previousMillisLuminosite, previousMillisAffichage;
 TimeLord tardis;
-int heureOuverture[2];         // Tableau de 2 cases : [heure,minute]
-int heureFermeture[2];         // Tableau de 2 cases : [heure,minute]
+tmElements_t heureOuverture;
+tmElements_t heureFermeture;
 
 // Declaration du stepper
 Stepper myStepper(stepsPerRevolution, pinStepper4, pinStepper2, pinStepper3, pinStepper1);
@@ -62,7 +56,6 @@ Stepper myStepper(stepsPerRevolution, pinStepper4, pinStepper2, pinStepper3, pin
 LiquidCrystal lcd(38, 39, 40, 41, 42, 43);
 
 // Declaration de l'horloge
-// RTC_DS3231 rtc;
 DS3232RTC rtc;
 
 void setup() {
@@ -74,14 +67,14 @@ void setup() {
   rtc.begin();
 
   // Décommenter le bloc ci-dessous pour regler l'heure
-  // tmElements_t tm;
-  // tm.Second = 00;
-  // tm.Minute = 17;
-  // tm.Hour = 13;               // set the RTC to an arbitrary time
-  // tm.Day = 2;
-  // tm.Month = 6;
-  // tm.Year = 2019 - 1970;      // tmElements_t.Year is the offset from 1970
-  // RTC.write(tm);              // set the RTC from the tm structure
+  tmElements_t tm;
+  tm.Second = 00;
+  tm.Minute = 17;
+  tm.Hour = 13;               // set the RTC to an arbitrary time
+  tm.Day = 2;
+  tm.Month = 11;
+  tm.Year = 2019 - 1970;      // tmElements_t.Year is the offset from 1970
+  RTC.write(tm);              // set the RTC from the tm structure
 
   // Initialisation des variables
   mode=1;
@@ -92,8 +85,6 @@ void setup() {
   dernierEtatBoutonMode=HIGH;
   etatPorte=LOW;
   previousMillisLuminosite = 0;
-  previousMillisMinute = 0;
-  previousMillisSemaine = 0;
   previousMillisAffichage = 0;
 
   // Initialisation du mode des PIN
@@ -120,41 +111,33 @@ void setup() {
   digitalWrite(pinStepper3,LOW);
   digitalWrite(pinStepper4,LOW);
 
-  // Allumage du backlight
-  digitalWrite(pinBacklightLCD, HIGH);
-
   // Initialisation du LCD
   lcd.begin(16, 2);
+  allumageLCD();
 
   // Initialsation de la vitesse du stepper
   myStepper.setSpeed(stepperSpeed);
 
   // Aquisition de l'heure actuelle
-  // now = rtc.now();
   t = RTC.get();
 
-  // Initialisation de l'alarme, reset des flags
-  RTC.setAlarm(ALM1_MATCH_DATE, 0, 0, 0, 1);
-  RTC.setAlarm(ALM2_MATCH_DATE, 0, 0, 0, 1);
+  // Calcul des horraires sunrise-sunset
+  calculSunriseSunset();
+
+  // Initialisation des alarmes, reset des flags
+  // RTC.setAlarm(alarmType, minutes, hours, dayOrDate);
+  RTC.setAlarm(ALM1_MATCH_HOURS, heureOuverture.Minute, heureOuverture.Hour, 0); // Set de l'alarme 1 sur l'heure de l'ouverture - offset
+  RTC.setAlarm(ALM2_MATCH_HOURS, heureFermeture.Minute, heureFermeture.Hour, 0); // Set de l'alarme 2 sur l'heure de la fermeture - offset
   RTC.alarm(ALARM_1);
   RTC.alarm(ALARM_2);
-  RTC.alarmInterrupt(ALARM_1, false);
-  RTC.alarmInterrupt(ALARM_2, false);
-  RTC.squareWave(SQWAVE_NONE);
-
-  // RTC.setAlarm(alarmType, minutes, hours, dayOrDate);
-  RTC.setAlarm(ALM1_MATCH_HOURS, 26, 13, 0); // Set de l'alarme 1
-  RTC.alarm(ALARM_1); // clear the alarm flag
-  RTC.squareWave(SQWAVE_NONE); // configure the INT/SQW pin for "interrupt" operation
-  RTC.alarmInterrupt(ALARM_1, true); // enable interrupt output for Alarm 1
+  RTC.alarmInterrupt(ALARM_1, true); // Enable interrupt output for Alarm 1
+  RTC.alarmInterrupt(ALARM_2, true); // Enable interrupt output for Alarm 2
+  RTC.squareWave(SQWAVE_NONE); // Configure the INT/SQW pin for "interrupt" operation
 
   // Initialisation pour le calcul sunrise-sunset
   tardis.TimeZone(1 * 60); // tell TimeLord what timezone your RTC is synchronized to. You can ignore DST
   // as long as the RTC never changes back and forth between DST and non-DST
   tardis.Position(LATITUDE, LONGITUDE); // tell TimeLord where in the world we are
-
-  // Execution de fonctions pour initialisation
-  calculSunriseSunset();
 
   // Buzz du demarrage
   buzz(100);
@@ -189,25 +172,12 @@ void loop() {
     break;
   }
 
-  // Execution toutes les minutes
-  if (currentMillis - previousMillisMinute >= tempoMinute) {
-    previousMillisMinute = currentMillis;
-  }
-
-  // Execution toutes les semaines
-  if (currentMillis - previousMillisSemaine >= tempoSemaine) {
-    previousMillisSemaine = currentMillis;
-
-    calculSunriseSunset();
-  }
-
-  // Execution toutes les minutes pour éteindre le LCD
+  // Execution toutes les minutes pour passer en sleep
   if (currentMillis - previousMillisAffichage >= tempoAffichage) {
-
     previousMillisAffichage = currentMillis;
 
-    // On eteint le lcd
-    extinctionLCD();
+    // On se met en veille
+    goingToSleep();
   }
 
   delay(100);
@@ -231,9 +201,7 @@ byte calculMode() {
     // Si le LCD est eteint, on l'allume, sinon on change de mode
     if (!etatLCD) {
       // Rallumage du lcd
-      lcd.display();
-      digitalWrite(pinBacklightLCD, HIGH);
-      etatLCD=true;
+      allumageLCD();
     }
     else {
       mode++;
@@ -320,9 +288,9 @@ void modeLuminosite() {
 void modeHorraire() {
 
   // Action sur la porte
-  if(hour(t)==heureOuverture[0] && minute(t)==heureOuverture[1])
+  if(hour(t)==heureOuverture.Hour && minute(t)==heureOuverture.Minute)
     ouverturePorte(true);
-  else if (hour(t)==heureFermeture[0] && minute(t)==heureFermeture[1])
+  else if (hour(t)==heureFermeture.Hour && minute(t)==heureFermeture.Minute)
     ouverturePorte(false);
 
 }
@@ -333,24 +301,36 @@ void goingToSleep() {
   attachInterrupt(digitalPinToInterrupt(pinInterruptRTC), wakeUp, LOW); //attaching a interrupt to pin RTC
   attachInterrupt(digitalPinToInterrupt(pinBoutonMode), wakeUp, LOW); //attaching a interrupt to pin boutonMode
   set_sleep_mode(SLEEP_MODE_PWR_DOWN);//Setting the sleep mode, in our case full sleep
-  digitalWrite(LED_BUILTIN,HIGH);
 
   extinctionLCD();
 
-  // Extinction des leds
+  // Extinction des leds, allumage de la led 13
+  digitalWrite(LED_BUILTIN,HIGH);
   digitalWrite(pinLedRouge,HIGH);
   digitalWrite(pinLedVerte,HIGH);
 
   delay(1000);
 
   sleep_cpu();//activating sleep mode
-  digitalWrite(LED_BUILTIN,LOW);
-  RTC.setAlarm(ALM1_MATCH_HOURS, 27, 13, 0); //Set New Alarm
-  RTC.alarm(ALARM_1); // clear the alarm flag
+
+  // Set new alarms
+  RTC.setAlarm(ALM1_MATCH_HOURS, heureOuverture.Minute, heureOuverture.Hour, 0); // Set de l'alarme 1 sur l'heure de l'ouverture - offset
+  RTC.setAlarm(ALM2_MATCH_HOURS, heureFermeture.Minute, heureFermeture.Hour, 0); // Set de l'alarme 2 sur l'heure de la fermeture - offset
+
+  // Clear the alarm flag
+  RTC.alarm(ALARM_1);
+  RTC.alarm(ALARM_2);
 }
 
 // Fonction éxécutée au réveil
 void wakeUp() {
+  // Extinction de la led 13
+  digitalWrite(LED_BUILTIN,LOW);
+
+  allumageLCD();
+
+  calculSunriseSunset();
+
   sleep_disable();//Disable sleep mode
   detachInterrupt(digitalPinToInterrupt(pinInterruptRTC)); //Removes the interrupt from pin
   detachInterrupt(digitalPinToInterrupt(pinBoutonMode)); //Removes the interrupt from pin
@@ -363,40 +343,40 @@ void calculSunriseSunset () {
 
   // Calcul du Sunrise et affectation des variables heureOuverture
   tardis.SunRise(today);
-  heureOuverture[0] = today[tl_hour];
-  heureOuverture[1] = today[tl_minute] + offsetSunrise;
+  heureOuverture.Hour = today[tl_hour];
+  heureOuverture.Minute = today[tl_minute] + offsetSunrise;
 
-  if (heureOuverture[1] < 0) {
-    while (heureOuverture[1] < 0) {
-      heureOuverture[0] = heureOuverture[0] - 1;
-      heureOuverture[1] = heureOuverture[1] + 60;
+  if (heureOuverture.Minute < 0) {
+    while (heureOuverture.Minute < 0) {
+      heureOuverture.Hour = heureOuverture.Hour - 1;
+      heureOuverture.Minute = heureOuverture.Minute + 60;
     }
   }
 
-  if (heureOuverture[1] > 59) {
-    while (heureOuverture[1] > 59) {
-      heureOuverture[0] = heureOuverture[0] + 1;
-      heureOuverture[1] = heureOuverture[1] - 60;
+  if (heureOuverture.Minute > 59) {
+    while (heureOuverture.Minute > 59) {
+      heureOuverture.Hour = heureOuverture.Hour + 1;
+      heureOuverture.Minute = heureOuverture.Minute - 60;
     }
   }
 
   // Calcul du Sunset et affectation des variables heureFermeture
   tardis.SunSet(today);
 
-  heureFermeture[0] = today[tl_hour];
-  heureFermeture[1] = today[tl_minute] + offsetSunset;
+  heureFermeture.Hour = today[tl_hour];
+  heureFermeture.Minute = today[tl_minute] + offsetSunset;
 
-  if (heureFermeture[1] < 0) {
-    while (heureFermeture[1] < 0) {
-      heureFermeture[0] = heureFermeture[0] - 1;
-      heureFermeture[1] = heureFermeture[1] + 60;
+  if (heureFermeture.Minute < 0) {
+    while (heureFermeture.Minute < 0) {
+      heureFermeture.Hour = heureFermeture.Hour - 1;
+      heureFermeture.Minute = heureFermeture.Minute + 60;
     }
   }
 
-  if (heureFermeture[1] > 59) {
-    while (heureFermeture[1] > 59) {
-      heureFermeture[0] = heureFermeture[0] + 1;
-      heureFermeture[1] = heureFermeture[1] - 60;
+  if (heureFermeture.Minute > 59) {
+    while (heureFermeture.Minute > 59) {
+      heureFermeture.Hour = heureFermeture.Hour + 1;
+      heureFermeture.Minute = heureFermeture.Minute - 60;
     }
   }
 
@@ -505,24 +485,24 @@ void AffichageLCD() {
       lcd.print("          ");
     break;
     case 3: // Mode 3 : Horaire
-      lcd.print(heureOuverture[0]);
+      lcd.print(heureOuverture.Hour);
       lcd.print(":");
-      if (heureOuverture[1] < 10) {
+      if (heureOuverture.Minute < 10) {
         lcd.print("0");
-        lcd.print(heureOuverture[1]);
+        lcd.print(heureOuverture.Minute);
       }
       else {
-        lcd.print(heureOuverture[1]);
+        lcd.print(heureOuverture.Minute);
       }
       lcd.print(" - ");
-      lcd.print(heureFermeture[0]);
+      lcd.print(heureFermeture.Hour);
       lcd.print(":");
-      if (heureFermeture[1] < 10) {
+      if (heureFermeture.Minute < 10) {
         lcd.print("0");
-        lcd.print(heureFermeture[1]);
+        lcd.print(heureFermeture.Minute);
       }
       else {
-        lcd.print(heureFermeture[1]);
+        lcd.print(heureFermeture.Minute);
       }
       lcd.print("           ");
     break;
