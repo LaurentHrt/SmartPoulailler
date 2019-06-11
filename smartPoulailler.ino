@@ -6,24 +6,31 @@
 #include <Stepper.h>        // Moteur pas a pas
 
 // Define pin
-#define pinBoutonFinDeCourseHaut 7
-#define pinBoutonFinDeCourseBas 7 // Pour test, a remettre a 6
+#define pinPhotoCell A0
 #define pinBacklightLCD A1
-#define pinStepper1 50
-#define pinStepper2 51
-#define pinStepper3 52
-#define pinStepper4 53
 #define pinLedRouge 2
 #define pinLedVerte 3
-#define pinBuzzer 22
+#define pinBoutonFinDeCourseHaut 7
+#define pinBoutonFinDeCourseBas 7 // Pour test, a remettre a 6
 #define pinBoutonPorte 12
 #define pinBoutonMode 18
-#define pinPhotoCell 0
 #define pinInterruptRTC 19  // Pin reliée au SQW du module RTC (Utilisée pour reveiller la carte)
+#define pinBuzzer 22
+#define pinLCD_RS 38
+#define pinLCD_E 39
+#define pinLCD_D4 40
+#define pinLCD_D5 41
+#define pinLCD_D6 42
+#define pinLCD_D7 43
+#define pinStepper_IN1 50
+#define pinStepper_IN2 51
+#define pinStepper_IN3 52
+#define pinStepper_IN4 53
+
 
 // Declaration des constantes
-const int seuilLuminosite=500;                                          // TODO: A definir
-const long tempoLuminosite = 5000;                                      // TODO: A definir
+const int seuilLuminosite=500;                                          // #TODO: A definir
+const long tempoLuminosite = 5000;                                      // #TODO: A definir
 const byte heureMatinMin = 5;
 const byte heureMatinMax = 10;
 const byte heureSoirMin = 18;
@@ -31,7 +38,7 @@ const byte heureSoirMax = 23;
 const long tempoSleep = 60000;  // Temporisation de une minute pour eteindre l'affichage
 const float LONGITUDE = 7.139;        // Longitude de Burnhaupt
 const float LATITUDE = 47.729;        // Lattitude de Burnhaupt
-const int offsetSunset = 120;    // Decalage apres le sunset en minutes (peut etre negatif) (Il y a un decalage de 2 heures apparemment)
+const int offsetSunset = 0;    // Decalage apres le sunset en minutes (peut etre negatif) (Il y a un decalage de 2 heures apparemment)
 const int offsetSunrise = 0;    // Decalage après le sunrise en minutes (peut etre negatif)
 const float stepsPerRevolution = 2048;  // Nombre de pas par tour (Caracteristique du moteur)
 const int stepperSpeed = 15; // en tr/min
@@ -50,10 +57,10 @@ tmElements_t heureOuverture;
 tmElements_t heureFermeture;
 
 // Declaration du stepper
-Stepper myStepper(stepsPerRevolution, pinStepper4, pinStepper2, pinStepper3, pinStepper1);
+Stepper myStepper(stepsPerRevolution, pinStepper_IN4, pinStepper_IN2, pinStepper_IN3, pinStepper_IN1);
 
 // Declaration du LCD (numero de pin)
-LiquidCrystal lcd(38, 39, 40, 41, 42, 43);
+LiquidCrystal lcd(pinLCD_RS, pinLCD_E, pinLCD_D4, pinLCD_D5, pinLCD_D6, pinLCD_D7);
 
 // Declaration de l'horloge
 DS3232RTC rtc;
@@ -106,10 +113,10 @@ void setup() {
   digitalWrite(pinLedVerte,HIGH);
 
   // Initialisation du Stepper
-  digitalWrite(pinStepper1,LOW);
-  digitalWrite(pinStepper2,LOW);
-  digitalWrite(pinStepper3,LOW);
-  digitalWrite(pinStepper4,LOW);
+  digitalWrite(pinStepper_IN1,LOW);
+  digitalWrite(pinStepper_IN2,LOW);
+  digitalWrite(pinStepper_IN3,LOW);
+  digitalWrite(pinStepper_IN4,LOW);
 
   // Initialisation du LCD
   lcd.begin(16, 2);
@@ -303,8 +310,8 @@ void goingToSleep() {
 
   // Extinction des leds, allumage de la led 13
   digitalWrite(LED_BUILTIN,HIGH);
-  digitalWrite(pinLedRouge,HIGH);
-  digitalWrite(pinLedVerte,HIGH);
+  // digitalWrite(pinLedRouge,HIGH);
+  // digitalWrite(pinLedVerte,HIGH);
 
   delay(1000);
 
@@ -397,22 +404,23 @@ void ouverturePorte(bool ouvrir) {
     buzz(50);
 
     // Tant que le bouton de fin de course n'est pas actionnee, on fait tourner le moteur
-    while (digitalRead(pinBoutonFinDeCourseHaut) != 0) {
+    // while (digitalRead(pinBoutonFinDeCourseHaut) != 0)
       myStepper.step(40);
-    }
 
     // Allumage des Leds
     digitalWrite(pinLedRouge,HIGH);
     digitalWrite(pinLedVerte,LOW);
 
     // Extinction du stepper motor
-    digitalWrite(pinStepper1,LOW);
-    digitalWrite(pinStepper2,LOW);
-    digitalWrite(pinStepper3,LOW);
-    digitalWrite(pinStepper4,LOW);
+    digitalWrite(pinStepper_IN1,LOW);
+    digitalWrite(pinStepper_IN2,LOW);
+    digitalWrite(pinStepper_IN3,LOW);
+    digitalWrite(pinStepper_IN4,LOW);
 
     buzz(100);
     etatPorte=true;
+
+    goingToSleep();
 
   }
 
@@ -422,7 +430,7 @@ void ouverturePorte(bool ouvrir) {
     buzz(50);
 
     // Tant que le bouton de fin de course n'est pas acctionnee
-    while (digitalRead(pinBoutonFinDeCourseBas) != 0)
+    // while (digitalRead(pinBoutonFinDeCourseBas) != 0)
       myStepper.step(-40);
 
     // Allumage des Leds
@@ -430,16 +438,17 @@ void ouverturePorte(bool ouvrir) {
     digitalWrite(pinLedVerte,HIGH);
 
     // Extinction du stepper motor
-    digitalWrite(pinStepper1,LOW);
-    digitalWrite(pinStepper2,LOW);
-    digitalWrite(pinStepper3,LOW);
-    digitalWrite(pinStepper4,LOW);
+    digitalWrite(pinStepper_IN1,LOW);
+    digitalWrite(pinStepper_IN2,LOW);
+    digitalWrite(pinStepper_IN3,LOW);
+    digitalWrite(pinStepper_IN4,LOW);
 
     buzz(100);
     etatPorte=false;
-  }
 
-  goingToSleep();
+    goingToSleep();
+
+  }
 
 }
 
