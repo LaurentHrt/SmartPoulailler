@@ -38,7 +38,7 @@ const byte heureSoirMax = 23;
 const long tempoSleep = 60000;  // Temporisation de une minute pour eteindre l'affichage
 const float LONGITUDE = 7.139;        // Longitude de Burnhaupt
 const float LATITUDE = 47.729;        // Lattitude de Burnhaupt
-const int offsetSunset = 180;    // Decalage apres le sunset en minutes (peut etre negatif) (Il y a un decalage de 2 heures apparemment)
+const int offsetSunset = 200;    // Decalage apres le sunset en minutes (peut etre negatif) (Il y a un decalage de 2 heures apparemment)
 const int offsetSunrise = -60;    // Decalage après le sunrise en minutes (peut etre negatif)
 const float stepsPerRevolution = 2048;  // Nombre de pas par tour (Caracteristique du moteur)
 const int stepperSpeed = 12; // en tr/min
@@ -53,8 +53,16 @@ time_t t;
 unsigned long currentMillis;
 unsigned long previousMillisLuminosite, previousMillisSleep;
 TimeLord tardis;
-tmElements_t heureOuverture;
-tmElements_t heureFermeture;
+
+struct struct_time {
+  int heure;
+  int minute;
+};
+
+struct_time heureOuverture = {0, 0};
+struct_time heureFermeture = {0, 0};
+
+
 
 // Declaration du stepper
 Stepper myStepper(stepsPerRevolution, pinStepper_IN4, pinStepper_IN2, pinStepper_IN3, pinStepper_IN1);
@@ -133,8 +141,8 @@ void setup() {
 
   // Initialisation des alarmes, reset des flags
   // RTC.setAlarm(alarmType, minutes, hours, dayOrDate);
-  RTC.setAlarm(ALM1_MATCH_HOURS, heureOuverture.Minute, heureOuverture.Hour, 0); // Set de l'alarme 1 sur l'heure de l'ouverture - offset
-  RTC.setAlarm(ALM2_MATCH_HOURS, heureFermeture.Minute, heureFermeture.Hour, 0); // Set de l'alarme 2 sur l'heure de la fermeture - offset
+  RTC.setAlarm(ALM1_MATCH_HOURS, heureOuverture.minute, heureOuverture.heure, 0); // Set de l'alarme 1 sur l'heure de l'ouverture - offset
+  RTC.setAlarm(ALM2_MATCH_HOURS, heureFermeture.minute, heureFermeture.heure, 0); // Set de l'alarme 2 sur l'heure de la fermeture - offset
   RTC.alarm(ALARM_1);
   RTC.alarm(ALARM_2);
   RTC.alarmInterrupt(ALARM_1, true); // Enable interrupt output for Alarm 1
@@ -249,9 +257,9 @@ void modeBouton() {
 void modeHorraire() {
 
   // Action sur la porte
-  if(hour(t)==heureOuverture.Hour && minute(t)==heureOuverture.Minute)
+  if(hour(t)==heureOuverture.heure && minute(t)==heureOuverture.minute)
     ouverturePorte(true);
-  else if (hour(t)==heureFermeture.Hour && minute(t)==heureFermeture.Minute)
+  else if (hour(t)==heureFermeture.heure && minute(t)==heureFermeture.minute)
     ouverturePorte(false);
 
 }
@@ -281,8 +289,8 @@ void goingToSleep() {
   delay(2000);
 
   // Set new alarms
-  RTC.setAlarm(ALM1_MATCH_HOURS, heureOuverture.Minute, heureOuverture.Hour, 0); // Set de l'alarme 1 sur l'heure de l'ouverture - offset
-  RTC.setAlarm(ALM2_MATCH_HOURS, heureFermeture.Minute, heureFermeture.Hour, 0); // Set de l'alarme 2 sur l'heure de la fermeture - offset
+  RTC.setAlarm(ALM1_MATCH_HOURS, heureOuverture.minute, heureOuverture.heure, 0); // Set de l'alarme 1 sur l'heure de l'ouverture - offset
+  RTC.setAlarm(ALM2_MATCH_HOURS, heureFermeture.minute, heureFermeture.heure, 0); // Set de l'alarme 2 sur l'heure de la fermeture - offset
 
   // Clear the alarm flag
   RTC.alarm(ALARM_1);
@@ -352,40 +360,41 @@ void calculSunriseSunset () {
 
   // Calcul du Sunrise et affectation des variables heureOuverture
   tardis.SunRise(today);
-  heureOuverture.Hour = today[tl_hour];
-  heureOuverture.Minute = today[tl_minute] + offsetSunrise;
 
-  if (heureOuverture.Minute < 0) {
-    while (heureOuverture.Minute < 0) {
-      heureOuverture.Hour = heureOuverture.Hour - 1;
-      heureOuverture.Minute = heureOuverture.Minute + 60;
+  heureOuverture.heure = today[tl_hour];
+  heureOuverture.minute = today[tl_minute] + offsetSunrise;
+
+  if (heureOuverture.minute < 0) {
+    while (heureOuverture.minute < 0) {
+      heureOuverture.heure = heureOuverture.heure - 1;
+      heureOuverture.minute = heureOuverture.minute + 60;
     }
   }
 
-  if (heureOuverture.Minute > 59) {
-    while (heureOuverture.Minute > 59) {
-      heureOuverture.Hour = heureOuverture.Hour + 1;
-      heureOuverture.Minute = heureOuverture.Minute - 60;
+  if (heureOuverture.minute > 59) {
+    while (heureOuverture.minute > 59) {
+      heureOuverture.heure = heureOuverture.heure + 1;
+      heureOuverture.minute = heureOuverture.minute - 60;
     }
   }
 
   // Calcul du Sunset et affectation des variables heureFermeture
   tardis.SunSet(today);
 
-  heureFermeture.Hour = today[tl_hour];
-  heureFermeture.Minute = today[tl_minute] + offsetSunset;
+  heureFermeture.heure = today[tl_hour];
+  heureFermeture.minute = today[tl_minute] + offsetSunset;
 
-  if (heureFermeture.Minute < 0) {
-    while (heureFermeture.Minute < 0) {
-      heureFermeture.Hour = heureFermeture.Hour - 1;
-      heureFermeture.Minute = heureFermeture.Minute + 60;
+  if (heureFermeture.minute < 0) {
+    while (heureFermeture.minute < 0) {
+      heureFermeture.heure = heureFermeture.heure - 1;
+      heureFermeture.minute = heureFermeture.minute + 60;
     }
   }
 
-  if (heureFermeture.Minute > 59) {
-    while (heureFermeture.Minute > 59) {
-      heureFermeture.Hour = heureFermeture.Hour + 1;
-      heureFermeture.Minute = heureFermeture.Minute - 60;
+  if (heureFermeture.minute > 59) {
+    while (heureFermeture.minute > 59) {
+      heureFermeture.heure = heureFermeture.heure + 1;
+      heureFermeture.minute = heureFermeture.minute - 60;
     }
   }
 
@@ -496,24 +505,24 @@ void AffichageLCD() {
       lcd.print("Mode manu                   ");
     break;
     case 2: // Mode 2 : Horaire
-      lcd.print(heureOuverture.Hour);
+      lcd.print(heureOuverture.heure);
       lcd.print(":");
-      if (heureOuverture.Minute < 10) {
+      if (heureOuverture.minute < 10) {
         lcd.print("0");
-        lcd.print(heureOuverture.Minute);
+        lcd.print(heureOuverture.minute);
       }
       else {
-        lcd.print(heureOuverture.Minute);
+        lcd.print(heureOuverture.minute);
       }
       lcd.print(" - ");
-      lcd.print(heureFermeture.Hour);
+      lcd.print(heureFermeture.heure);
       lcd.print(":");
-      if (heureFermeture.Minute < 10) {
+      if (heureFermeture.minute < 10) {
         lcd.print("0");
-        lcd.print(heureFermeture.Minute);
+        lcd.print(heureFermeture.minute);
       }
       else {
-        lcd.print(heureFermeture.Minute);
+        lcd.print(heureFermeture.minute);
       }
       lcd.print("           ");
     break;
