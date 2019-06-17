@@ -38,13 +38,13 @@ const byte heureSoirMax = 23;
 const long tempoSleep = 60000;  // Temporisation de une minute pour eteindre l'affichage
 const float LONGITUDE = 7.139;        // Longitude de Burnhaupt
 const float LATITUDE = 47.729;        // Lattitude de Burnhaupt
-const int offsetSunset = 0;    // Decalage apres le sunset en minutes (peut etre negatif) (Il y a un decalage de 2 heures apparemment)
-const int offsetSunrise = 0;    // Decalage après le sunrise en minutes (peut etre negatif)
+const int offsetSunset = 180;    // Decalage apres le sunset en minutes (peut etre negatif) (Il y a un decalage de 2 heures apparemment)
+const int offsetSunrise = -60;    // Decalage après le sunrise en minutes (peut etre negatif)
 const float stepsPerRevolution = 2048;  // Nombre de pas par tour (Caracteristique du moteur)
-const int stepperSpeed = 15; // en tr/min
+const int stepperSpeed = 12; // en tr/min
 
 // Declaration des variables globales
-byte mode; // 1: Mode bouton, 2: Mode Luminosité, 3: Mode horaire
+byte mode; // 1: Mode bouton, 2: Mode horaire, 3: Mode Luminosité
 bool etatLCD; // False = LCD eteint; true = LCD allumé
 bool etatBouton, dernierEtatBouton, etatBoutonMode, dernierEtatBoutonMode;
 bool etatPorte;
@@ -168,11 +168,11 @@ void loop() {
     case 1: // Mode 1 : Bouton
       modeBouton();
     break;
-    case 2: // Mode 2 : Luminosite
-      modeLuminosite();
-    break;
-    case 3: // Mode 3 : Horaire
+    case 2: // Mode 2 : Horaire
       modeHorraire();
+    break;
+    case 3: // Mode 3 : Luminosite
+      modeLuminosite();
     break;
     default:
 
@@ -206,7 +206,7 @@ byte calculMode() {
     // Si le LCD est eteint, on l'allume, sinon on change de mode
 
       mode++;
-      if (mode > 3)
+      if (mode > 2)  // TEMPORAIRE On ne passe pas dans le mode luminosité (non fonctionnel)
         mode=1;
 
   }
@@ -245,47 +245,7 @@ void modeBouton() {
 
 }
 
-// Fonction : Mode 2 : Luminosite
-void modeLuminosite() {
-
-  // Lecture de la photocell
-  etatPhotoCell=analogRead(pinPhotoCell);
-
-  // Action sur la porte
-  // Si la luminosite est superieure a ... dans la plage horraire horraire ... pendant x, on ouvre la porte
-  if(hour(t)>=heureMatinMin && hour(t)<heureMatinMax) {
-    if(etatPhotoCell>seuilLuminosite && previousMillisLuminosite != 0) {
-      if (currentMillis - previousMillisLuminosite >= tempoLuminosite) {
-        previousMillisLuminosite = currentMillis;
-        ouverturePorte(true);
-      }
-    }
-    else {
-      previousMillisLuminosite = currentMillis;
-    }
-  }
-
-  if(hour(t)>=heureSoirMin && hour(t)<heureSoirMax) {
-    if(etatPhotoCell<seuilLuminosite && previousMillisLuminosite != 0) {
-      if (currentMillis - previousMillisLuminosite >= tempoLuminosite) {
-        previousMillisLuminosite = currentMillis;
-        ouverturePorte(false);
-      }
-    }
-    else {
-      previousMillisLuminosite = currentMillis;
-    }
-  }
-
-  // Securite : ouverture/fermeture de la porte aux horaires max du matin/soir
-  if(hour(t)==heureMatinMax)
-    ouverturePorte(true);
-  if(hour(t)==heureSoirMax)
-    ouverturePorte(false);
-
-}
-
-// Fonction : Mode 3 : Horaire
+// Fonction : Mode 2 : Horaire
 void modeHorraire() {
 
   // Action sur la porte
@@ -327,6 +287,46 @@ void goingToSleep() {
   // Clear the alarm flag
   RTC.alarm(ALARM_1);
   RTC.alarm(ALARM_2);
+}
+
+// Fonction : Mode 3 : Luminosite
+void modeLuminosite() {
+
+  // Lecture de la photocell
+  etatPhotoCell=analogRead(pinPhotoCell);
+
+  // Action sur la porte
+  // Si la luminosite est superieure a ... dans la plage horraire horraire ... pendant x, on ouvre la porte
+  if(hour(t)>=heureMatinMin && hour(t)<heureMatinMax) {
+    if(etatPhotoCell>seuilLuminosite && previousMillisLuminosite != 0) {
+      if (currentMillis - previousMillisLuminosite >= tempoLuminosite) {
+        previousMillisLuminosite = currentMillis;
+        ouverturePorte(true);
+      }
+    }
+    else {
+      previousMillisLuminosite = currentMillis;
+    }
+  }
+
+  if(hour(t)>=heureSoirMin && hour(t)<heureSoirMax) {
+    if(etatPhotoCell<seuilLuminosite && previousMillisLuminosite != 0) {
+      if (currentMillis - previousMillisLuminosite >= tempoLuminosite) {
+        previousMillisLuminosite = currentMillis;
+        ouverturePorte(false);
+      }
+    }
+    else {
+      previousMillisLuminosite = currentMillis;
+    }
+  }
+
+  // Securite : ouverture/fermeture de la porte aux horaires max du matin/soir
+  if(hour(t)==heureMatinMax)
+    ouverturePorte(true);
+  if(hour(t)==heureSoirMax)
+    ouverturePorte(false);
+
 }
 
 // Fonction éxécutée au réveil
@@ -399,15 +399,17 @@ void ouverturePorte(bool ouvrir) {
 
   if(!etatPorte && ouvrir) {
 
-    digitalWrite(pinLedRouge,LOW);
-    digitalWrite(pinLedVerte,LOW);
+    // On éteint tout pour garder la puissance
+    extinctionLCD();
+    digitalWrite(pinLedRouge,HIGH);
+    digitalWrite(pinLedVerte,HIGH);
     buzz(50);
 
     // Tant que le bouton de fin de course n'est pas actionnee, on fait tourner le moteur
-    // while (digitalRead(pinBoutonFinDeCourseHaut) != 0)
+    while (digitalRead(pinBoutonFinDeCourseHaut) != 0)
       myStepper.step(40);
 
-    // Allumage des Leds
+    // On rallume les leds et le LCD
     digitalWrite(pinLedRouge,HIGH);
     digitalWrite(pinLedVerte,LOW);
 
@@ -425,12 +427,15 @@ void ouverturePorte(bool ouvrir) {
   }
 
   else if (etatPorte && !ouvrir) {
-    digitalWrite(pinLedRouge,LOW);
-    digitalWrite(pinLedVerte,LOW);
+
+    // On éteint tout pour garder la puissance
+    extinctionLCD();
+    digitalWrite(pinLedRouge,HIGH);
+    digitalWrite(pinLedVerte,HIGH);
     buzz(50);
 
     // Tant que le bouton de fin de course n'est pas acctionnee
-    // while (digitalRead(pinBoutonFinDeCourseBas) != 0)
+    while (digitalRead(pinBoutonFinDeCourseBas) != 0)
       myStepper.step(-40);
 
     // Allumage des Leds
@@ -490,12 +495,7 @@ void AffichageLCD() {
     case 1: // Mode 1 : Bouton
       lcd.print("Mode manu                   ");
     break;
-    case 2: // Mode 2 : Luminosite
-      lcd.print("Mode auto : ");
-      lcd.print(etatPhotoCell);
-      lcd.print("          ");
-    break;
-    case 3: // Mode 3 : Horaire
+    case 2: // Mode 2 : Horaire
       lcd.print(heureOuverture.Hour);
       lcd.print(":");
       if (heureOuverture.Minute < 10) {
@@ -516,6 +516,11 @@ void AffichageLCD() {
         lcd.print(heureFermeture.Minute);
       }
       lcd.print("           ");
+    break;
+    case 3: // Mode 3 : Luminosite
+      lcd.print("Mode auto : ");
+      lcd.print(etatPhotoCell);
+      lcd.print("          ");
     break;
     default:
       lcd.print("Erreur");
