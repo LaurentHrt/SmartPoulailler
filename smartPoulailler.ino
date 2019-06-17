@@ -7,7 +7,6 @@
 
 // Define pin
 #define pinPhotoCell A0
-#define pinBacklightLCD A1
 #define pinLedRouge 2
 #define pinLedVerte 3
 #define pinBoutonFinDeCourseHaut 7
@@ -16,6 +15,7 @@
 #define pinBoutonMode 18
 #define pinInterruptRTC 19  // Pin reliée au SQW du module RTC (Utilisée pour reveiller la carte)
 #define pinBuzzer 22
+#define pinLCD_A_Backlight 36
 #define pinLCD_RS 38
 #define pinLCD_E 39
 #define pinLCD_D4 40
@@ -109,7 +109,7 @@ void setup() {
   pinMode(pinBoutonMode,INPUT_PULLUP);
   pinMode(pinBoutonFinDeCourseHaut,INPUT_PULLUP);
   pinMode(pinBoutonFinDeCourseBas,INPUT_PULLUP);
-  pinMode(pinBacklightLCD, OUTPUT);
+  pinMode(pinLCD_A_Backlight, OUTPUT);
 
   // Initialisation de l'etat des PIN
   digitalWrite(LED_BUILTIN,LOW);
@@ -466,14 +466,14 @@ void ouverturePorte(bool ouvrir) {
 // Fonction extinction du LCD et du backlight
 void extinctionLCD() {
   lcd.noDisplay();
-  digitalWrite(pinBacklightLCD, LOW);
+  digitalWrite(pinLCD_A_Backlight, LOW);
   etatLCD=false;
 }
 
 // Fonction allumage du LCD et du backlight
 void allumageLCD() {
   lcd.display();
-  digitalWrite(pinBacklightLCD, HIGH);
+  digitalWrite(pinLCD_A_Backlight, HIGH);
   etatLCD=true;
 }
 
