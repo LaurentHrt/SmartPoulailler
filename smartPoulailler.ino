@@ -27,6 +27,11 @@
 #define pinStepper_IN3 52
 #define pinStepper_IN4 53
 
+// Declaration des structures
+struct struct_time {
+  int heure;
+  int minute;
+};
 
 // Declaration des constantes
 const int seuilLuminosite=500;                                          // #TODO: A definir
@@ -53,16 +58,8 @@ time_t t;
 unsigned long currentMillis;
 unsigned long previousMillisLuminosite, previousMillisSleep;
 TimeLord tardis;
-
-struct struct_time {
-  int heure;
-  int minute;
-};
-
 struct_time heureOuverture = {0, 0};
 struct_time heureFermeture = {0, 0};
-
-
 
 // Declaration du stepper
 Stepper myStepper(stepsPerRevolution, pinStepper_IN4, pinStepper_IN2, pinStepper_IN3, pinStepper_IN1);
